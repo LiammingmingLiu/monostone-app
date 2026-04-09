@@ -41,6 +41,32 @@ final class HomeStore {
         actionItemsByCard[cardId]?.first { $0.id == itemId }
     }
 
+    /// 删除一条 Action Item.
+    ///
+    /// 实际 prototype 语义是 **软删除** (`rejected = true`), 但当前 UI 层只关心"从列表
+    /// 里移除". Step 9 (数据层抽象) 时会把这个改成 PATCH + optimistic update.
+    ///
+    /// **副作用说明 (对应 prototype `rejectActionItemBySwipe` 的注释)**:
+    /// - 从结构化摘要里 "N 项待办" 计数 -1
+    /// - 反馈给分类器: "这条 AI 推断是错的"
+    /// - Memory: **不记录** 任何 commitment (用户主动拒绝, 不是承诺)
+    func deleteActionItem(cardId: String, itemId: String) {
+        guard var list = actionItemsByCard[cardId] else { return }
+        list.removeAll { $0.id == itemId }
+        if list.isEmpty {
+            actionItemsByCard.removeValue(forKey: cardId)
+        } else {
+            actionItemsByCard[cardId] = list
+        }
+    }
+
+    /// 重置一张卡片的 action items 回到初始 mock 状态 (demo 用的 reset 按钮).
+    func restoreActionItems(for cardId: String) {
+        if let initial = HomeStore.mockActionItems[cardId] {
+            actionItemsByCard[cardId] = initial
+        }
+    }
+
     // MARK: - Derived state
 
     private func recomputeFiltered() {

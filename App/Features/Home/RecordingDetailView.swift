@@ -31,6 +31,23 @@ struct RecordingDetailView: View {
         .background(Theme.background)
         .navigationTitle(card.type.label)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Demo-only 重置按钮: 左滑删掉的 action items 可以一键还原
+            if store.actionItems(for: card.id).count < (HomeStore.mockActionItems[card.id]?.count ?? 0) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            store.restoreActionItems(for: card.id)
+                        }
+                        showToast("已重置 Action Items")
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .tint(Theme.accent)
+                    .accessibilityLabel("重置 Action Items")
+                }
+            }
+        }
         .sheet(item: $presentedSheet) { destination in
             switch destination {
             case .fullSummary(let summary):
@@ -114,26 +131,33 @@ struct RecordingDetailView: View {
         }
     }
 
-    // MARK: - Action items
+    // MARK: - Action items (with swipe-to-delete)
 
+    @ViewBuilder
     private var actionItemsSection: some View {
         let items = store.actionItems(for: card.id)
-        return VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("Action Items")
-            if items.isEmpty {
-                Text("没有提取到待办")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textDimmer)
-                    .padding(.vertical, 8)
-            } else {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeader("Action Items")
                 VStack(spacing: 0) {
                     ForEach(items) { item in
-                        Button {
-                            presentedSheet = .actionItem(item)
-                        } label: {
-                            actionItemRow(item)
+                        SwipeActionItemRow(
+                            onDelete: {
+                                // 用 spring 动画让 section 自己走 .transition
+                                // (section 级联塌陷 = 父视图的 !items.isEmpty 切换)
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                    store.deleteActionItem(cardId: card.id, itemId: item.id)
+                                }
+                            }
+                        ) {
+                            Button {
+                                presentedSheet = .actionItem(item)
+                            } label: {
+                                actionItemRow(item)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+
                         if item.id != items.last?.id {
                             Divider().background(Theme.border).padding(.leading, 16)
                         }
@@ -146,6 +170,10 @@ struct RecordingDetailView: View {
                 }
                 .clipShape(.rect(cornerRadius: 12))
             }
+            .transition(.asymmetric(
+                insertion: .opacity,
+                removal: .opacity.combined(with: .scale(scale: 0.95, anchor: .top))
+            ))
         }
     }
 
