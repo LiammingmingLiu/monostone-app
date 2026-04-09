@@ -2,61 +2,94 @@ import SwiftUI
 
 /// 首页 Feed（对应 prototype s2）
 ///
-/// TODO（按 prototype 的 pages-and-interactions.md §2 home_feed 实现）:
-/// - [ ] 顶部 greeting + 今日速览（DailySummary）
-/// - [ ] Filter chips（全部 / 长录音 / 指令 / 灵感 / 待办）
-/// - [ ] 卡片列表 LazyVStack，支持 `processing` 状态的 shimmer
-/// - [ ] 嵌入 Action Items 左滑删除（最复杂的手势交互，参考 prototype §A1）
-/// - [ ] FAB 浮动录音按钮（长按 / 快点两态，参考 prototype §F1 F2）
+/// 构成：
+/// - `header` · greeting + 状态行
+/// - `TodayGlance` · 今日速览卡片
+/// - `FilterChipBar` · 5 个 filter chips
+/// - `LazyVStack` · 卡片列表（store.filteredCards）
+///
+/// 未实现（后续步骤）：
+/// - FAB 浮动录音按钮（Step 8）
+/// - Action Items 嵌入 + 左滑删除（Step 7）
+/// - 打开 card 详情页（Step 6 modals + navigation）
 struct HomeView: View {
+    @State private var store = HomeStore()
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                LazyVStack(alignment: .leading, spacing: 18) {
                     header
-                    placeholderContent
+                    TodayGlance(summary: store.summary)
+                        .padding(.horizontal, 16)
+
+                    FilterChipBar(store: store)
+                        .padding(.top, 2)
+
+                    cardList
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.vertical, 8)
             }
+            .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationBarHidden(true)
+            .toolbarVisibility(.hidden, for: .navigationBar)
         }
     }
 
+    // MARK: - Subviews
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("早上好，明明")
+            Text(store.summary.greeting)
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(Theme.text)
+                .contentTransition(.opacity)
+
             HStack(spacing: 6) {
                 Circle()
-                    .fill(Theme.accent)
+                    .fill(store.summary.ringConnected ? Theme.accent : Theme.textDimmer)
                     .frame(width: 6, height: 6)
-                Text("第 12 天 · 戒指已连接 · 今日第 8 次交互")
+                    .shadow(color: Theme.accent.opacity(0.6), radius: 4)
+                Text(statusLine)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textDim)
             }
         }
+        .padding(.horizontal, 16)
     }
 
-    private var placeholderContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("首页 Feed 尚未实现")
-                .font(.system(size: 13, weight: .semibold))
+    private var statusLine: String {
+        let ringText = store.summary.ringConnected ? "戒指已连接" : "戒指未连接"
+        return "第 \(store.summary.dayCount) 天 · \(ringText) · 今日第 \(store.summary.interactionsToday) 次交互"
+    }
+
+    private var cardList: some View {
+        LazyVStack(spacing: 12) {
+            if store.filteredCards.isEmpty {
+                emptyState
+            } else {
+                ForEach(store.filteredCards) { card in
+                    CardRow(card: card)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 8)),
+                            removal: .opacity
+                        ))
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .animation(.easeOut(duration: 0.2), value: store.filteredCards)
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("没有匹配的卡片", systemImage: "tray")
                 .foregroundStyle(Theme.textDim)
-            Text("参考 monostone-ios-prototype/docs/pages-and-interactions.md §2 home_feed")
-                .font(.system(size: 11))
+        } description: {
+            Text("切换其他筛选，或下拉刷新")
                 .foregroundStyle(Theme.textDimmer)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Theme.panel)
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Theme.border, lineWidth: 0.5)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .frame(maxWidth: .infinity, minHeight: 200)
     }
 }
 
