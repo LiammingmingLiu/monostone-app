@@ -9,6 +9,7 @@ import SwiftUI
 /// - 使用 `.navigationDestination(for: ProfileDestination.self)` 统一路由
 struct ProfileView: View {
     @State private var store = ProfileStore()
+    @Environment(RingCoordinator.self) private var ringCoordinator
 
     var body: some View {
         NavigationStack {
@@ -67,8 +68,8 @@ struct ProfileView: View {
     private var ringCard: some View {
         HStack(spacing: 16) {
             Circle()
-                .stroke(Theme.accent, lineWidth: 1)
-                .shadow(color: Theme.accent.opacity(0.2), radius: 6)
+                .stroke(ringCoordinator.isConnected ? Theme.accent : Theme.textDimmer, lineWidth: 1)
+                .shadow(color: Theme.accent.opacity(ringCoordinator.isConnected ? 0.2 : 0), radius: 6)
                 .frame(width: 32, height: 32)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Monostone 戒指")
@@ -77,11 +78,16 @@ struct ProfileView: View {
                 Text(ringStatusLine)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textDim)
+                    .contentTransition(.opacity)
             }
             Spacer()
-            Text("\(store.ring.batteryPct)%")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(Theme.text)
+            if let battery = ringCoordinator.batteryPct {
+                Text("\(battery)%")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.text)
+                    .contentTransition(.numericText())
+                    .monospacedDigit()
+            }
         }
         .padding(16)
         .background(Theme.panel)
@@ -92,9 +98,22 @@ struct ProfileView: View {
         .clipShape(.rect(cornerRadius: 14))
     }
 
+    /// 实时从 `RingCoordinator` 拼装状态文案. 连接中 / 已连接 / 断开 / 未授权
+    /// 都会自动刷新; AsyncStream 事件直接驱动 UI.
     private var ringStatusLine: String {
-        let connState = store.ring.connected ? "已连接" : "未连接"
-        return "\(connState) · 第 \(store.user.dayCount) 天 · 固件 \(store.ring.firmwareVersion)"
+        let connState: String = {
+            switch ringCoordinator.connectionState {
+            case .connected: "已连接"
+            case .connecting, .scanning: "正在连接"
+            case .reconnecting: "重连中"
+            case .bluetoothOff: "蓝牙关闭"
+            case .unauthorized: "未授权"
+            case .failed(let reason): "失败: \(reason)"
+            case .idle: "未连接"
+            }
+        }()
+        let firmware = ringCoordinator.deviceInfo?.firmwareVersion ?? store.ring.firmwareVersion
+        return "\(connState) · 第 \(ringCoordinator.dayCount) 天 · 固件 \(firmware)"
     }
 
     // MARK: - Menu groups

@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var summaryStore = FullSummaryStore()
     @State private var recordingStore = RecordingStore()
     @State private var shortCaptureToastMessage: String?
+    @Environment(RingCoordinator.self) private var ringCoordinator
 
     var body: some View {
         NavigationStack {
@@ -123,20 +124,33 @@ struct HomeView: View {
 
             HStack(spacing: 6) {
                 Circle()
-                    .fill(store.summary.ringConnected ? Theme.accent : Theme.textDimmer)
+                    .fill(ringCoordinator.isConnected ? Theme.accent : Theme.textDimmer)
                     .frame(width: 6, height: 6)
                     .shadow(color: Theme.accent.opacity(0.6), radius: 4)
                 Text(statusLine)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textDim)
+                    .contentTransition(.opacity)
             }
         }
         .padding(.horizontal, 16)
     }
 
+    /// 实时从 `RingCoordinator` 读连接状态 + 电量 / 天数.
+    /// 戒指事件通过 AsyncStream → @Observable → SwiftUI 自动刷新.
     private var statusLine: String {
-        let ringText = store.summary.ringConnected ? "戒指已连接" : "戒指未连接"
-        return "第 \(store.summary.dayCount) 天 · \(ringText) · 今日第 \(store.summary.interactionsToday) 次交互"
+        let ringText: String = {
+            switch ringCoordinator.connectionState {
+            case .idle, .scanning, .connecting: "正在连接戒指"
+            case .connected: "戒指已连接"
+            case .reconnecting: "戒指重连中"
+            case .bluetoothOff: "蓝牙未开启"
+            case .unauthorized: "蓝牙未授权"
+            case .failed: "戒指连接失败"
+            }
+        }()
+        let dayCount = ringCoordinator.isConnected ? ringCoordinator.dayCount : store.summary.dayCount
+        return "第 \(dayCount) 天 · \(ringText) · 今日第 \(store.summary.interactionsToday) 次交互"
     }
 
     private var cardList: some View {
