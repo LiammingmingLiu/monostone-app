@@ -1,74 +1,124 @@
 import SwiftUI
 
-/// Agent 聊天 Tab（对应 prototype s9，IM 风格）
+/// Agent 聊天 Tab（对应 prototype s9 agent_tab）.
 ///
-/// TODO（按 prototype 的 pages-and-interactions.md §7.6 agent_tab 实现）:
-/// - [ ] 自定义导航栏：脉动头像 + "Agent" + 在线状态点 + 模型说明
-/// - [ ] 消息列表 ScrollView + ScrollViewReader，支持 5 种消息类型:
-///       text / steps / attachment / actions / typing
-/// - [ ] 气泡入场动画（bubble-in keyframes → SwiftUI .transition）
-/// - [ ] Typing indicator（3 点波浪跳动）
-/// - [ ] 底部输入栏 + 麦克风 + 发送按钮（处理键盘 avoidance）
-/// - [ ] 数据从 `GET /v1/agent/conversation` 拉取（当前只读 mock.js 的 AGENT_CONVERSATION）
-/// - [ ] 发送消息走 `POST /v1/agent/messages` + WebSocket stream
+/// 结构：
+/// - 自定义 `AgentNavBar` (脉动头像 + 在线状态)
+/// - 聊天滚动区 `ScrollViewReader + LazyVStack<MessageBubble>`
+///   - 新消息追加时自动滚到底
+///   - 气泡入场用 `.transition` + `withAnimation`
+/// - 底部 `ChatInputBar`
+///   - 输入框 focus 时 SwiftUI 会自动处理键盘 avoidance
+///
+/// 导航栏被完全隐藏, 改用自定义 `AgentNavBar` 以匹配 prototype 的视觉.
 struct AgentView: View {
+    @State private var store = AgentStore()
+    @State private var toastMessage: String?
+    @State private var toastId = UUID()
+
+    private let bottomAnchorID = "chat-bottom"
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    header
-                    placeholder
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+            VStack(spacing: 0) {
+                AgentNavBar(
+                    agentModel: store.conversation.agentModel,
+                    contextDaysLoaded: store.conversation.contextDaysLoaded
+                )
+                Divider().background(Theme.border)
+
+                chatScroll
+
+                ChatInputBar(store: store, onSend: handleSend)
             }
             .background(Theme.background)
-            .navigationBarHidden(true)
+            .toolbarVisibility(.hidden, for: .navigationBar)
+            .overlay(alignment: .bottom) { toastOverlay }
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(Theme.accent.opacity(0.12))
-                .overlay { Circle().stroke(Theme.accent, lineWidth: 0.5) }
-                .frame(width: 34, height: 34)
-                .shadow(color: Theme.accent.opacity(0.2), radius: 6)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Agent")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(Theme.typeTodo)
-                        .frame(width: 5, height: 5)
-                        .shadow(color: Theme.typeTodo.opacity(0.6), radius: 3)
-                    Text("在线 · Claude Opus 4.6 · 已加载 42 天 context")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.textDim)
+    // MARK: - Chat scroll
+
+    private var chatScroll: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(store.conversation.messages) { message in
+                        MessageBubble(
+                            message: message,
+                            onActionTap: handleAction,
+                            onAttachmentTap: handleAttachment
+                        )
+                        .id(message.id)
+                    }
+                    // 底部锚点用于自动滚动
+                    Color.clear
+                        .frame(height: 1)
+                        .id(bottomAnchorID)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .onAppear {
+                proxy.scrollTo(bottomAnchorID, anchor: .bottom)
+            }
+            .onChange(of: store.conversation.messages.count) { _, _ in
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    proxy.scrollTo(bottomAnchorID, anchor: .bottom)
                 }
             }
-            Spacer()
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8),
+                   value: store.conversation.messages.count)
+    }
+
+    // MARK: - Actions
+
+    private func handleSend() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            store.sendDraftMessage()
         }
     }
 
-    private var placeholder: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("IM 聊天界面尚未实现")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.textDim)
-            Text("参考 monostone-ios-prototype/docs/pages-and-interactions.md §7.6 agent_tab")
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.textDimmer)
+    private func handleAction(_ action: AgentQuickAction) {
+        showToast(action.toastMessage)
+    }
+
+    private func handleAttachment(_ attachment: AgentAttachment) {
+        showToast("打开附件: \(attachment.title)")
+    }
+
+    private func showToast(_ message: String) {
+        toastMessage = message
+        toastId = UUID()
+        let currentId = toastId
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            if currentId == toastId {
+                withAnimation(.easeIn(duration: 0.2)) { toastMessage = nil }
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Theme.panel)
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Theme.border, lineWidth: 0.5)
+    }
+
+    // MARK: - Toast
+
+    @ViewBuilder
+    private var toastOverlay: some View {
+        if let toastMessage {
+            Text(toastMessage)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Theme.panel)
+                .overlay { Capsule().stroke(Theme.border, lineWidth: 0.5) }
+                .clipShape(.capsule)
+                .padding(.bottom, 90)
+                .transition(.opacity.combined(with: .offset(y: 10)))
+                .animation(.easeOut(duration: 0.2), value: self.toastMessage)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
