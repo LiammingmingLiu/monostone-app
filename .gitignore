@@ -1,0 +1,56 @@
+# XcodeGen-generated project (always derivable from project.yml)
+*.xcodeproj/
+*.xcworkspace/
+
+# Xcode build artifacts
+build/
+DerivedData/
+.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# User-specific Xcode state
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+
+# Swift Package Manager
+Packages/
+.swiftpm/
+Package.resolved
+.netrc
+
+# CocoaPods / Carthage (if ever used)
+Pods/
+Carthage/Build/
+
+# macOS system files
+.DS_Store
+
+# Secrets / local env
+*.env
+*.local
+*.pem
+*.p12
+*.mobileprovision
+GoogleService-Info.plist
+APIKeys.plist
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary / scratch
+/tmp/
+*.log

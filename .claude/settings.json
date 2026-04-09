@@ -1,0 +1,7 @@
+{
+  "description": "Project-level Claude Code settings for monostone-app. See CLAUDE.md for guidance.",
+  "enableProjectSkills": true,
+  "enabledSkills": [
+    "swiftui-expert-skill"
+  ]
+}
