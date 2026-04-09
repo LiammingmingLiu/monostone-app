@@ -21,7 +21,6 @@ struct RecordingDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header
-                actions
                 participantsSection
                 structuredSummarySection
                 actionItemsSection
@@ -35,7 +34,7 @@ struct RecordingDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background)
-        .navigationTitle(card.type.label)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Demo-only 重置按钮: 左滑删掉的 action items 可以一键还原
@@ -76,64 +75,67 @@ struct RecordingDetailView: View {
             }
         }
         .overlay(alignment: .bottom) { toastOverlay }
+        // 底部 actions bar (对应 prototype `<div class="detail-actions">`, rec 卡片只有一个分享按钮)
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 10) {
+                Button {
+                    presentedSheet = .share
+                } label: {
+                    Label("分享", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Theme.typeLongRec.opacity(0.16))
+                        .foregroundStyle(Theme.typeLongRec)
+                        .overlay {
+                            Capsule()
+                                .stroke(Theme.typeLongRec.opacity(0.5), lineWidth: 0.5)
+                        }
+                        .clipShape(.capsule)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+        }
     }
 
     // MARK: - Header
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Text("长录音")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Theme.typeLongRec)
+                .tracking(1.0)
             Text(card.title)
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Theme.text)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(card.metaLine)
+            Text(headerMeta)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.textDim)
-            if let project = card.project {
-                Text(project)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Theme.accent)
-                    .tracking(0.4)
-            }
         }
     }
 
-    // MARK: - Action buttons
+    /// 对应 prototype `<div class="mt">42:18 · 4/9 10:30 · Series A</div>`,
+    /// 格式: 时长 · 日期时间 · 项目. **不**含参与人数和待办数,
+    /// 那两项已经在参与人 section 和 Action Items section 里显示过了.
+    private var headerMeta: String {
+        var parts: [String] = []
+        if let d = card.durationDisplay { parts.append(d) }
+        parts.append(headerDateTime)
+        if let p = card.project { parts.append(p) }
+        return parts.joined(separator: " · ")
+    }
 
-    private var actions: some View {
-        HStack(spacing: 10) {
-            Button {
-                if let summary = summaryStore.summary(for: card.id) {
-                    presentedSheet = .fullSummary(summary)
-                } else {
-                    showToast("该卡片暂无完整纪要")
-                }
-            } label: {
-                Label("查看完整总结", systemImage: "text.alignleft")
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Theme.accent.opacity(0.14))
-                    .foregroundStyle(Theme.accent)
-                    .clipShape(.capsule)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                presentedSheet = .share
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.text)
-                    .frame(width: 38, height: 38)
-                    .background(Theme.panel)
-                    .overlay { Circle().stroke(Theme.border, lineWidth: 0.5) }
-                    .clipShape(.circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("分享")
-
-            Spacer()
+    private var headerDateTime: String {
+        // 2 card 用 prototype 里固定的字面量
+        switch card.id {
+        case "rec-1": "4/9 10:30"
+        case "rec-2": "昨天 16:40"
+        default: card.timeRelative
         }
     }
 
