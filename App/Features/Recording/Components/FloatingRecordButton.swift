@@ -2,26 +2,21 @@ import SwiftUI
 
 /// 浮在首页右下角的录音 FAB.
 ///
-/// 对应 prototype `.fab` + `@keyframes fab-pulse-red`:
-/// - 60×60 圆形（空闲 / 长录音态）
-/// - 18px 圆角方形（短捕捉态, 对应 prototype `.fab.recording-short`）
-/// - 按下时 scale 0.9
-/// - 进入长录音态时开启青绿外圈脉动（TimelineView 驱动）
+/// 对应 prototype `.fab` + `.fab-label`:
+/// - 60×60 按钮, 空闲 = 青绿圆形, 长录音 = 红色圆形 + 脉动外环, 短捕捉 = 紫色圆角方形
+/// - 按钮**上方** 浮一个 label, 显示 "录音中 m:ss" / "捕捉中 m:ss"
+/// - label 只在录音 / 捕捉态出现, 用 `.transition` 进出动画
 ///
-/// 使用 `RoundedRectangle(cornerRadius:)` 作为主形状, 通过动画改变
-/// cornerRadius 实现圆 ↔ 圆角方的 morph. 不用 `Circle` 因为跨类型
-/// 切换没法流畅动画.
+/// 行为 (prototype `fabDown` / `fabUp` 行为 1:1 复刻):
+/// - 空闲 + 快速点 (< 300ms 松手) → 进入长录音态, **留在首页**, FAB 变红 + 显示 timer
+/// - 空闲 + 按住 ≥ 300ms → 进入短捕捉态, FAB 变紫 + 显示 timer, 松手停止
+/// - 长录音态 + 再次点 → **停止** 长录音, FAB 回到空闲
 ///
-/// 手势: `DragGesture(minimumDistance: 0)` 跟踪 touch-down/up.
-/// Store 侧管理 300ms 阈值判定, view 只转发 touch 事件.
+/// Store 里的 `handleTouchDown` / `handleTouchUp` 实现了上面的状态机.
 struct FloatingRecordButton: View {
     let store: RecordingStore
 
-    /// `@State` local only for gesture phase tracking.
-    /// 真正的 phase 在 store 里.
     @State private var hasStartedTouch = false
-
-    /// `sensoryFeedback` 触发器 (每次 phase 变化震一下)
     @State private var feedbackToken = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -29,17 +24,70 @@ struct FloatingRecordButton: View {
     // MARK: - Constants
 
     private let size: CGFloat = 60
-    private let circleRadius: CGFloat = 30    // 半径 = 直径 / 2 ⇒ 圆形
-    private let squareRadius: CGFloat = 18    // 圆角方形
+    private let circleRadius: CGFloat = 30
+    private let squareRadius: CGFloat = 18
 
     var body: some View {
+        VStack(spacing: 10) {
+            // Timer label 浮在 FAB 上方, 只在录音/捕捉态显示.
+            if isActivelyRecording {
+                timerLabel
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.85).combined(with: .opacity)
+                            .combined(with: .offset(y: 8)),
+                        removal: .opacity.combined(with: .offset(y: 8))
+                    ))
+            }
+
+            // 主按钮
+            buttonBody
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.78), value: store.phase)
+        .animation(.spring(response: 0.35, dampingFraction: 0.78), value: isActivelyRecording)
+    }
+
+    // MARK: - Timer label
+
+    private var isActivelyRecording: Bool {
+        switch store.phase {
+        case .recordingLong, .capturingShort: true
+        default: false
+        }
+    }
+
+    private var timerLabel: some View {
+        VStack(spacing: 2) {
+            Text(store.phase == .capturingShort ? "捕捉中" : "录音中")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(store.phase == .capturingShort ? Theme.typeCommand : .red)
+                .tracking(0.6)
+            Text(store.elapsedDisplay)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Theme.text)
+                .contentTransition(.numericText())
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Theme.panel)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Theme.border, lineWidth: 0.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 2)
+    }
+
+    // MARK: - Button body
+
+    private var buttonBody: some View {
         ZStack {
-            // Outer pulsing ring · 只在长录音态显示
+            // Outer pulsing ring · 仅长录音态显示
             if store.phase == .recordingLong && !reduceMotion {
                 pulsingOuterRing
             }
 
-            // Main button
+            // 主按钮
             RoundedRectangle(cornerRadius: cornerRadius)
                 .fill(fillColor)
                 .overlay {
@@ -51,12 +99,11 @@ struct FloatingRecordButton: View {
                 .scaleEffect(scaleFactor)
                 .shadow(color: shadowColor, radius: 12, x: 0, y: 4)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.72), value: store.phase)
         .simultaneousGesture(touchGesture)
         .sensoryFeedback(.impact(weight: .medium), trigger: feedbackToken)
         .accessibilityLabel(accessibilityLabelText)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("快速点 开始长录音, 按住 短捕捉")
+        .accessibilityHint("快速点 开始长录音, 按住 短捕捉, 再次点 停止长录音")
     }
 
     // MARK: - Gesture
@@ -89,7 +136,7 @@ struct FloatingRecordButton: View {
         case .recordingLong:
             return Color.red.opacity(0.18)
         case .capturingShort:
-            return Theme.typeCommand.opacity(0.22) // 紫色, 对应 prototype
+            return Theme.typeCommand.opacity(0.22)
         }
     }
 
@@ -123,7 +170,7 @@ struct FloatingRecordButton: View {
         }
     }
 
-    // MARK: - Inner shape (dot / square / fill)
+    // MARK: - Inner shape
 
     @ViewBuilder
     private var innerShape: some View {

@@ -62,7 +62,17 @@ final class RecordingStore {
     // MARK: - Touch handlers (from FloatingRecordButton)
 
     /// FAB touch-down 时调用.
+    ///
+    /// - 如果当前在 `.recordingLong`: 这次 touch 是"再次点击以停止录音"(prototype
+    ///   `fabDown` 的第一条分支, 见 events-protocol.md §F1). 直接调 stop, 后续的
+    ///   touchUp 看到 .idle 状态会 no-op.
+    /// - 如果当前在 `.idle`: 进入 .pressed, 300ms 阈值决定 short vs long.
+    /// - 如果当前在 .capturingShort: 已经在按住态不应该再次触发 down.
     func handleTouchDown() {
+        if phase == .recordingLong {
+            stopLongRecording()
+            return
+        }
         guard phase == .idle else { return }
         phase = .pressed
         pressTask?.cancel()

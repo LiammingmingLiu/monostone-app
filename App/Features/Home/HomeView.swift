@@ -52,34 +52,19 @@ struct HomeView: View {
                 )
             }
             .overlay(alignment: .bottomTrailing) {
+                // FAB + timer label 作为整体浮在右下角
+                // 长录音 + 短捕捉 全部留在首页, 不再 fullScreenCover 到独立页面
+                // (prototype `fabDown` / `fabUp` 行为: 快速点 FAB = 进长录音态留在首页,
+                //  按住 = 短捕捉, 再次点 = 停止)
                 FloatingRecordButton(store: recordingStore)
                     .padding(.trailing, 20)
                     .padding(.bottom, 20)
             }
             .overlay(alignment: .bottom) { shortCaptureToast }
-            .fullScreenCover(isPresented: longRecordingBinding) {
-                LongRecordingView(store: recordingStore)
-            }
             .onChange(of: recordingStore.lastShortCaptureId) { _, _ in
                 handleShortCaptureFinished()
             }
         }
-    }
-
-    // MARK: - Long recording binding
-
-    /// 把 `recordingStore.phase == .recordingLong` 转成 `Binding<Bool>`,
-    /// 以便驱动 `.fullScreenCover(isPresented:)`.
-    /// 关闭 cover 时回调 `cancelLongRecording`, 把 store 拉回 idle 状态.
-    private var longRecordingBinding: Binding<Bool> {
-        Binding(
-            get: { recordingStore.phase == .recordingLong },
-            set: { newValue in
-                if !newValue, recordingStore.phase == .recordingLong {
-                    recordingStore.cancelLongRecording()
-                }
-            }
-        )
     }
 
     // MARK: - Short capture toast
