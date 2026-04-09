@@ -16,7 +16,10 @@ struct ProfileSnapshot: Hashable {
     var audioStorage: AudioStorageMode
     var retentionPeriod: RetentionPeriod
     var permissions: [PermissionStatusEntry]
-    var exportOptions: [ExportOption]
+    /// 对应 prototype s15 第一 section "完整导出" 的两张大卡片
+    var fullExportCards: [FullExportCard]
+    /// 对应 prototype s15 第二 section "按类型导出" 的三行 list
+    var typedExportRows: [TypedExportRow]
     var classificationPolicy: ClassificationPolicy
     var hardwareSettings: HardwareSettingsConfig
     var devSettings: DevSettingsConfig
@@ -100,12 +103,22 @@ struct InMemoryProfileRepository: ProfileRepository {
                 .init(permission: .calendar, status: .authorized,
                       usage: "读取日程 + 写入提醒")
             ],
-            exportOptions: [
-                .init(scope: .full,        format: .markdown, approxSizeMB: 1_228, includeAudio: true),
-                .init(scope: .full,        format: .json,     approxSizeMB: 480,   includeAudio: false),
-                .init(scope: .longRecOnly, format: .markdown, approxSizeMB: 820,   includeAudio: true),
-                .init(scope: .cmdOnly,     format: .markdown, approxSizeMB: 48,    includeAudio: false),
-                .init(scope: .ideaOnly,    format: .markdown, approxSizeMB: 12,    includeAudio: false)
+            fullExportCards: [
+                .init(
+                    title: "Markdown 归档",
+                    description: "所有长录音、指令、灵感、待办以 Markdown 文件形式导出, 按日期分文件夹. 可以直接导入 Obsidian / Logseq.",
+                    format: .markdownZip
+                ),
+                .init(
+                    title: "JSON 原始数据",
+                    description: "完整的 card + memory + chat 结构化数据, 包含原始 transcript 和 metadata. 适合自建后端或迁移.",
+                    format: .json
+                )
+            ],
+            typedExportRows: [
+                .init(scope: .longRecOnly, approxSizeMB: 1_228, includeAudio: true),
+                .init(scope: .cmdOnly,     approxSizeMB: 8,     includeAudio: false),
+                .init(scope: .ideaOnly,    approxSizeMB: 320,   includeAudio: true)
             ],
             classificationPolicy: ClassificationPolicy(
                 autoClassify: true,

@@ -37,7 +37,8 @@ final class ProfileStore {
 
     // MARK: - Export (s15)
 
-    var exportOptions: [ExportOption]
+    var fullExportCards: [FullExportCard]
+    var typedExportRows: [TypedExportRow]
 
     // MARK: - Advanced (s16)
 
@@ -120,12 +121,22 @@ final class ProfileStore {
             .init(permission: .calendar,   status: .authorized,
                   usage: "读取日程 + 写入提醒")
         ]
-        self.exportOptions = [
-            .init(scope: .full,        format: .markdown, approxSizeMB: 1_228, includeAudio: true),
-            .init(scope: .full,        format: .json,     approxSizeMB: 480,   includeAudio: false),
-            .init(scope: .longRecOnly, format: .markdown, approxSizeMB: 820,   includeAudio: true),
-            .init(scope: .cmdOnly,     format: .markdown, approxSizeMB: 48,    includeAudio: false),
-            .init(scope: .ideaOnly,    format: .markdown, approxSizeMB: 12,    includeAudio: false)
+        self.fullExportCards = [
+            .init(
+                title: "Markdown 归档",
+                description: "所有长录音、指令、灵感、待办以 Markdown 文件形式导出, 按日期分文件夹. 可以直接导入 Obsidian / Logseq.",
+                format: .markdownZip
+            ),
+            .init(
+                title: "JSON 原始数据",
+                description: "完整的 card + memory + chat 结构化数据, 包含原始 transcript 和 metadata. 适合自建后端或迁移.",
+                format: .json
+            )
+        ]
+        self.typedExportRows = [
+            .init(scope: .longRecOnly, approxSizeMB: 1_228, includeAudio: true),
+            .init(scope: .cmdOnly,     approxSizeMB: 8,     includeAudio: false),
+            .init(scope: .ideaOnly,    approxSizeMB: 320,   includeAudio: true)
         ]
         self.classificationPolicy = ClassificationPolicy(
             autoClassify: true,
@@ -160,7 +171,8 @@ final class ProfileStore {
             self.audioStorage = snap.audioStorage
             self.retentionPeriod = snap.retentionPeriod
             self.permissions = snap.permissions
-            self.exportOptions = snap.exportOptions
+            self.fullExportCards = snap.fullExportCards
+            self.typedExportRows = snap.typedExportRows
             self.classificationPolicy = snap.classificationPolicy
             self.hardwareSettings = snap.hardwareSettings
             self.devSettings = snap.devSettings

@@ -297,22 +297,19 @@ struct TodoDetailView: View {
 
     // MARK: - Bottom actions
 
+    /// 对应 prototype `.detail-actions` 的 flex 3 按钮. 用同一套
+    /// `DetailActionButton` 保持和其他详情页一致. 背景用 `Theme.background`
+    /// 和 iOS 26 tabbar 的毛玻璃区分开, 避免融合.
     private var bottomActions: some View {
         HStack(spacing: 10) {
-            Button("修改") {}
-                .buttonStyle(.bordered)
-                .tint(Theme.textDim)
-            Button("取消") {}
-                .buttonStyle(.bordered)
-                .tint(.red)
-            Button("完成") {}
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.typeTodo)
-            Spacer()
+            DetailActionButton(title: "修改", kind: .secondary) { }
+            DetailActionButton(title: "取消", kind: .destructive) { }
+            DetailActionButton(title: "完成", kind: .primary) { }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 22)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
+        .background(Theme.background)
     }
 }
 

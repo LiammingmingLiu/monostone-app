@@ -16,7 +16,7 @@
           "blocks": [
             { "type": "paragraph", "text": "本次会议是 **Monostone** 与 **Linear Capital** 的 **Series A D-Day** 深度对接会议, 也是双方进入正式融资流程前的最后一次关键访谈." },
             { "type": "subheading", "text": "D-Day 前的三周铺垫" },
-            { "type": "paragraph", "text": "在过去 **三周** 内, Monostone 团队与 Linear Capital 完成了 **4 轮** 前期沟通, 双方已在三件事上达成共识: 产品形态 (单硬件 + 端到端软件)、技术可行性 (双麦 + 低功耗方案验证通过)、团队背景 (硬件 / 软件 / GTM 三角齐备)." },
+            { "type": "paragraph", "text": "在过去 **三周** 内, Monostone 团队与 Linear Capital 完成了 **4 轮** 前期沟通, 双方已在三件事上达成共识: 产品形态 (单硬件 + 端到端软件)、技术可行性 (双麦 + 低功耗方案验证通过)、团队背景 (硬件 / 软件 / GTM 三角齐备). 今天的 D-Day 会议目的明确 —— 做最后一轮关键投资判断; **Linear Capital 将在 2026-04-15 (下周三)** 内部投委会后形成初步 Term Sheet 意向, 明确估值区间和交易结构." },
             { "type": "subheading", "text": "Pitch 材料的重新梳理" },
             { "type": "paragraph", "text": "明明在会议开始前一天 (**2026-04-08**) 专门重新梳理了 pitch 材料, 重点针对敦敏此前提出的 **三个疑问** 做专项回应:" },
             {
@@ -26,7 +26,9 @@
                 "**竞争壁垒**: 面对 Apple / OpenAI 级别玩家时, 护城河究竟在哪?",
                 "**GTM 节奏**: 为什么跳过 Kickstarter 直接独立站 DTC?"
               ]
-            }
+            },
+            { "type": "subheading", "text": "Linear Capital 阵容罕见加码" },
+            { "type": "paragraph", "text": "本次 Linear 方面由 **敦敏** (合伙人) 亲自带队, 罕见地同时带上 **投资总监郑灿** 和另一位合伙人 **马俊**. 三人阵容在 Linear 的早期项目跟进中极少出现 —— 明明在会前和郑灿的短短几句寒暄里确认: **内部对这个项目的重视程度已经拉满**." }
           ]
         },
         {
@@ -35,35 +37,110 @@
             { "type": "subheading", "text": "敦敏的开场直球" },
             { "type": "paragraph", "text": "会议 **10:30** 准时开始. 敦敏没有寒暄, 直接把心里盘旋多日的疑问摊在桌面上:" },
             { "type": "quote", "text": "Monostone 到底是一个 AI infrastructure 项目, 还是一个 closed-loop 的消费级产品? 这两个叙事我们内部几个合伙人吵了一周, 没吵出结果.", "author": "敦敏, 10:31" },
+            { "type": "paragraph", "text": "敦敏坦率解释了为什么这个问题至关重要: **Infra 叙事性感但风险巨大** —— 护城河难建立、估值逻辑复杂、退出路径模糊; 而 **Closed-Loop 叙事朴素但更符合 Linear 对早期消费硬件的判断框架** —— 有清晰的 ARR 增长、可度量的毛利、可预测的退出路径." },
             { "type": "subheading", "text": "明明的回答: 闭环为本, 生态为翼" },
             { "type": "paragraph", "text": "明明没有回避这个问题, 直接亮出他已经想清楚的答案:" },
             { "type": "quote", "text": "戒指 + App + Agent 是闭环产品, 插件生态是长期的开放性叙事. 两者不矛盾 —— 主心骨是闭环, 外延是生态.", "author": "刘明明, 10:34" },
-            { "type": "paragraph", "text": "他进一步解释: Agent 层保留开放接口 (**CLI** / **API** / **Skills**) 是为了让高阶用户和开发者能接入, 但 **这不是产品的主要价值主张**, 主要价值仍然在闭环的端到端体验上." }
+            { "type": "paragraph", "text": "他进一步解释: Agent 层保留开放接口 (**CLI** / **API** / **Skills**) 是为了让高阶用户和开发者能接入, 但 **这不是产品的主要价值主张**, 主要价值仍然在闭环的端到端体验上. 换句话说, **\"开放\"是护城河, 不是商品**." },
+            { "type": "subheading", "text": "Linear 内部投资逻辑落定" },
+            { "type": "paragraph", "text": "敦敏对这个回答明显满意, 马俊在一旁补了决定性的一句:" },
+            { "type": "quote", "text": "这样我们内部就知道怎么写投资逻辑了 —— 按消费硬件看估值, 但在产品力上承认它有 Infra 的想象空间.", "author": "马俊, 10:37" }
           ]
         },
         {
           "heading": "议题二 · 竞争格局重估",
           "blocks": [
+            { "type": "subheading", "text": "郑灿的 Apple 威胁论" },
+            { "type": "paragraph", "text": "议题转到竞争格局. **郑灿** 作为 Linear 的投资总监, 一上来就抛出了他最担心的竞争对手 —— 不是 OpenAI, 而是 **Apple**:" },
+            { "type": "quote", "text": "Apple 一旦在 Vision Pro 之外做一款 AI 穿戴设备, 凭借生态壁垒几乎可以瞬间压垮所有创业公司. 早期硬件项目, 最怕的就是这种局.", "author": "郑灿, 10:42" },
             { "type": "subheading", "text": "明明的反驳: Apple 被自己的隐私框架锁死" },
-            { "type": "paragraph", "text": "明明对郑灿的 \"Apple 威胁论\" 给出了完全不同的解读. 他分析说, **Apple 在 AI 穿戴领域反而是最慢的玩家**, 原因有两层:" },
+            { "type": "paragraph", "text": "明明对这个判断给出了完全不同的解读. 他分析说, **Apple 在 AI 穿戴领域反而是最慢的玩家**, 原因有两层:" },
             {
               "type": "bulletedList",
               "items": [
-                "**隐私框架锁死**: Apple 的品牌根基是 \"隐私\", 这让它在结构上无法做激进的 \"always listening\" 类产品.",
-                "**内部协作历史糟糕**: Apple 的 AI 团队 (**Siri**) 和硬件团队 (**Vision Pro**) 之间的协作历史上就是出名的糟糕."
+                "**隐私框架锁死**: Apple 的品牌根基是 \"隐私\", 这让它在结构上无法做激进的 \"always listening\" 类产品. 任何\"监听类\"功能在 Apple 内部合规流程里都会被卡死很久.",
+                "**内部协作历史糟糕**: Apple 的 AI 团队 (**Siri**) 和硬件团队 (**Vision Pro**) 之间的协作历史上就是出名的糟糕, 这在过去十年里反复出现, 不会在一个新的 AI 穿戴项目上突然变好."
               ]
             },
+            { "type": "subheading", "text": "真正的威胁 · OpenAI" },
+            { "type": "paragraph", "text": "明明紧接着指出, **OpenAI** 才是真正值得警惕的玩家:" },
+            {
+              "type": "orderedList",
+              "items": [
+                "**硬件团队已经成型**: OpenAI 最近收购了一个前 Apple 硬件团队, 核心成员来自 Apple Watch 与 iPhone 产品线.",
+                "**Sam Altman 的明确意图**: 他在最近 **3 个月** 内至少 **5 次** 在公开场合表达过对消费硬件的强烈兴趣 —— 不像是试探, 更像是预热.",
+                "**模型 + 硬件一体化的天然优势**: OpenAI 拥有任何创业公司都拿不到的模型能力, 一旦硬件落地, 即刻就是\"新时代的 Apple\"."
+              ]
+            },
+            { "type": "subheading", "text": "Humane AI Pin 的反例" },
+            { "type": "paragraph", "text": "为了让 Linear 不要对\"大厂一定赢\"盲从, 明明举了 **Humane AI Pin** 作为反例 —— 创始人全部来自 Apple, 融资超过 **2.4 亿美元**, 但产品一上市就被差评集体淹没. \"**苹果前员工创业做 AI 硬件也可以失败得很惨**\" 这句话让敦敏和郑灿都明显松了一口气." },
             { "type": "subheading", "text": "大厂威胁排序 (明明给出的最终版)" },
             {
               "type": "table",
               "headers": ["排名", "玩家", "威胁等级", "核心判断"],
               "rows": [
-                ["1", "OpenAI",  "最大", "硬件团队 + 模型垄断 + Altman 亲自下场"],
-                ["2", "Samsung", "中",   "已有 Galaxy Ring, 短期再做一款概率极低"],
-                ["3", "Google",  "低",   "生态封闭、跨 AI/硬件协作差"],
-                ["4", "Apple",   "最低", "隐私框架锁死 + Siri/Vision Pro 协作差"]
+                ["**1**", "**OpenAI**",  "最大", "硬件团队 + 模型垄断 + Altman 亲自下场"],
+                ["2",     "**Samsung**", "中",   "已有 Galaxy Ring, 短期再做一款概率极低"],
+                ["3",     "**Google**",  "低",   "生态封闭、跨 AI/硬件协作差"],
+                ["4",     "**Apple**",   "最低", "隐私框架锁死 + Siri/Vision Pro 内部协作差"]
               ]
             }
+          ]
+        },
+        {
+          "heading": "议题三 · 最大风险 · 品类本身",
+          "blocks": [
+            { "type": "subheading", "text": "敦敏的灵魂一问" },
+            { "type": "paragraph", "text": "讨论转入风险议题. 敦敏没有绕弯子, 直接开问:" },
+            { "type": "quote", "text": "你们最怕什么?", "author": "敦敏, 10:52" },
+            { "type": "subheading", "text": "明明的回答: 怕的不是对手, 怕的是品类本身" },
+            { "type": "paragraph", "text": "明明沉默了几秒, 给出一个出乎 Linear 意料的答案:" },
+            { "type": "quote", "text": "最怕的不是竞争对手入局, 最怕的是 2028 年回头看, 发现戒指这个品类本身没起来 —— 就像当年的 Google Glass.", "author": "刘明明, 10:53" },
+            { "type": "paragraph", "text": "他解释: 如果 **2028 年** 智能戒指品类被证伪, 那么就算 Monostone 执行完美也会被品类衰退拖下水 —— 这是单一创业公司无法对冲的系统性风险." },
+            { "type": "subheading", "text": "对冲锚点一 · 双麦 15 dB SNR 物理差异化" },
+            { "type": "paragraph", "text": "为了对冲品类风险, Monostone 在产品设计上埋了两层锚点. 第一层是 **双麦阵列** 带来的信噪比优势 —— 这是任何单麦戒指都做不到的物理差异化:" },
+            {
+              "type": "table",
+              "headers": ["场景", "双麦相对单麦 SNR 提升", "用户体感"],
+              "rows": [
+                ["静态 (人不动)",          "**+18 ~ 20 dB**", "塞口袋、衣服盖着也能录"],
+                ["快速动 (挥手 / 走路)",    "**+12 ~ 15 dB**", "手可自由动, 无姿势约束"],
+                ["平均 (正常动作)",        "约 **+15 dB**",   "相当于 **4 倍距离** / **31.6 倍功率**"]
+              ]
+            },
+            { "type": "subheading", "text": "对冲锚点二 · 高频交互让 context 真正复利" },
+            { "type": "paragraph", "text": "第二层锚点是 **每用户 10 次/天以上** 的高频交互 —— 只有这种高频交互能让 context 真正复利起来. 明明强调: 低频产品的 context 永远拉不开差距, 高频产品的 context 在 **30 天** 后就会形成别的玩家无法复制的护城河." },
+            { "type": "subheading", "text": "马俊的 marketing 建议 · 换一种叙事语言" },
+            { "type": "paragraph", "text": "马俊对这套风险答案非常认可, 当场给出一个关键的 marketing 建议:" },
+            { "type": "quote", "text": "别用技术语言. \"15 dB SNR\" 普通人听不懂. 用场景语言 —— 走路、开车、户外都能清晰录音 —— 把它包装成 \"freestyle recording\".", "author": "马俊, 10:58" },
+            { "type": "paragraph", "text": "明明当场把这个建议记下, 决定在下一版 marketing deck 里把 **\"freestyle recording\"** 作为硬件核心卖点的主叙事." }
+          ]
+        },
+        {
+          "heading": "议题四 · GTM 节奏与第一批用户",
+          "blocks": [
+            { "type": "subheading", "text": "Linear 对\"跳过 Kickstarter\"的顾虑" },
+            { "type": "paragraph", "text": "会议的最后 **15 分钟** 讨论 GTM 节奏. Linear 方面对明明反复强调的\"不做 Kickstarter 直接独立站 DTC\"提出了顾虑:" },
+            { "type": "quote", "text": "如果没有 Kickstarter 的众筹数据做背书, 早期的 GTM 数据怎么打动下一轮投资人?", "author": "郑灿, 11:01" },
+            { "type": "subheading", "text": "明明的答复: 早期用户不在 Kickstarter" },
+            { "type": "paragraph", "text": "明明的回答基于清晰的用户画像判断: **Monostone 的早期用户群是高频 AI 使用者** —— 开发者、研究员、产品经理. 这波人不在 Kickstarter, 他们的转化路径是 **Twitter** 和 **知乎** 上的口碑扩散. 他列举了两个近三年的成功案例: **Rewind** 与 **Limitless** —— 两家都是靠社交传播完成冷启动, 证明这条路径在 AI 硬件品类里是经过验证的." },
+            { "type": "subheading", "text": "郑灿的 B2B 优先级建议" },
+            { "type": "paragraph", "text": "郑灿在会议尾声抛出了一个关键建议:" },
+            { "type": "quote", "text": "企业场景的优先级应该高于家庭场景 —— 企业用户的 context 共享价值更大, B2B 商业模型也更健康.", "author": "郑灿, 11:08" },
+            { "type": "paragraph", "text": "这个建议没有当场拍板. 明明当场承诺: **下周前** 做一版 **B2B scenario roadmap** 再来汇报." }
+          ]
+        },
+        {
+          "heading": "会议收尾与后续动作",
+          "blocks": [
+            { "type": "subheading", "text": "敦敏的最终信号" },
+            { "type": "paragraph", "text": "会议 **11:12** 结束. 敦敏没有做任何承诺, 只说:" },
+            { "type": "quote", "text": "下周三 Linear 内部投委会后会给你们初步意见.", "author": "敦敏, 11:12" },
+            { "type": "paragraph", "text": "但明明从敦敏和马俊互相交换的眼神里读出一个关键信号 —— **这次会议至少没有踩到任何红线**." },
+            { "type": "subheading", "text": "马俊单独留下的提醒 · EO 14117" },
+            { "type": "paragraph", "text": "会议散场后, 马俊单独把明明留了几分钟, 提醒他尽快研究一下 **EO 14117 美国数据法规** 对智能穿戴设备可能的影响. 这是美国政府近期对 **\"涉及敏感个人数据的外国控制技术\"** 的限制, 可能会影响 Monostone 未来进入美国市场的策略." },
+            { "type": "subheading", "text": "明明的现场承诺" },
+            { "type": "paragraph", "text": "明明当场承诺: **2026-04-13 (下周一) 前** 给 Linear 一份简短的 **EO 14117 合规分析**, 同时把 B2B scenario roadmap 作为附件一并发过去." }
           ]
         }
       ]
@@ -82,32 +159,42 @@
         {
           "heading": "会议背景",
           "blocks": [
-            { "type": "paragraph", "text": "过去两周 Monostone 后端团队在 Memory 模块上运行了一个 A/B 对比实验, 评估一版新的 consolidation 策略是否值得全量上线. A 组使用林啸开发的新 branch, B 组维持原 baseline. 今天的目的是基于数据做出全量切换决策." }
+            { "type": "paragraph", "text": "过去两周 Monostone 后端团队在 Memory 模块上运行了一个 A/B 对比实验, 目的是评估一版新的 consolidation 策略是否值得全量上线. A 组使用林啸最近开发的新 branch (更激进的 L2 promotion 触发条件 + 新的 embedding 相似度算法), B 组维持原 baseline. 两周数据积累之后, 本次会议的目的是基于数据做出全量切换决策." }
           ]
         },
         {
-          "heading": "关键数据",
+          "heading": "会议内容",
           "blocks": [
             { "type": "subheading", "text": "两周对比数据" },
             {
               "type": "table",
               "headers": ["指标", "A 组", "baseline"],
               "rows": [
-                ["Retrieval 准确率", "**85%**", "71%"],
-                ["p95 latency",     "500 ms",  "320 ms"],
-                ["Token 消耗",       "+18%",    "基准"]
+                ["Retrieval 准确率", "**85%**",  "71%"],
+                ["p95 latency",      "500 ms",   "320 ms"],
+                ["Token 消耗",        "+18%",     "基准"]
               ]
             },
-            { "type": "paragraph", "text": "A 组的优势主要在长会话场景, 短会话上 A 组和 baseline 几乎没有差异." },
-            { "type": "subheading", "text": "最终决策" },
+            { "type": "paragraph", "text": "会议开始林啸先 share 了 evaluation dashboard 上的两周数据对比. 核心指标包括 memory retrieval 准确率、p95 latency、多会话泄漏率、token 消耗量. 数据显示 A 组在 retrieval 准确率上显著领先 —— 从 baseline 的 **71%** 上升到 **85%**, 提升了 **14 个百分点**. 但代价也不小: p95 latency 从 **320ms** 涨到了 **500ms**, token 消耗增加了 **18%**. 林啸特别强调, A 组的优势主要体现在长会话场景 (超过 30 分钟的会议), 对于短会话 (少于 5 分钟的 quick command) A 组和 baseline 几乎没有差异, 甚至有时 baseline 稍好." },
+            { "type": "subheading", "text": "用户感知与 baseline 的隐藏 bug" },
+            { "type": "paragraph", "text": "明明追问了一个关键问题: 用户有没有感知到 latency 的差异? 林啸展示了他们埋的用户行为数据 —— 在 A 组用户中, 超过 5 秒等待的指令任务的完成率比 baseline 低了 **3%**, 这是一个值得警惕的信号. 但明明指出 3% 的差异可能在误差范围内, 建议继续观察两周再下结论." },
+            { "type": "paragraph", "text": "随后讨论转向了另一个意外发现: B 组 (baseline) 在多会话并发场景下出现了 **L2 记忆泄漏** 的 bug —— 当同一用户同时开了两个不同项目的 session 时, 会出现 session A 的 memory 被错误地作为 context 引用到 session B 里的情况. **王浩** 最早发现这个 bug, 他 demo 了具体的复现步骤, 大家都看得一头冷汗. 林啸当场定位到这个 bug 来自 consolidation 触发条件里的一个 `session_id` 判断逻辑的缺陷, 这个问题在 baseline 里已经存在了好几个月, 只是之前没有人注意到." },
+            { "type": "subheading", "text": "Memory confidence decay 机制" },
+            { "type": "paragraph", "text": "讨论的第三个焦点是 **Memory confidence decay** 机制的设计. 王浩分享了他在读 spaced repetition 相关论文后的一些想法: 可以借鉴 **SM-2** 算法, 让 memory 的 confidence 随时间自然衰减 —— 如果一条 memory 在一定时间内没有被引用或确认, 它的 confidence 应该自动往下掉, 避免错误的早期推断一直被 Agent 当作事实使用. 明明接话说这个想法和他昨天走路时录的一条灵感完全对齐, 当场让 Agent 把那条灵感调出来给大家看. 三个人讨论了具体的衰减曲线 —— 是用线性衰减、指数衰减还是基于 **Ebbinghaus** 遗忘曲线的 S 形衰减. 最终的共识是用 **指数衰减** 作为 v1 实现, 参数先粗调, 再根据实际数据精调." },
+            { "type": "subheading", "text": "A/B 后续策略与最终决策" },
+            { "type": "paragraph", "text": "会议的最后讨论了 A/B 的后续策略. 三个方案被提出来: 方案一是全量切到 A 组, 方案二是维持 baseline 继续优化, 方案三是做混合策略 (根据 session 特征动态选择 A 或 B). 最终选择了方案三:" },
             {
               "type": "orderedList",
               "items": [
                 "短会话走 **baseline** (成熟稳定, latency 低)",
                 "长会话走 **A 组** (准确率明显更好)",
-                "林啸周五前 ship 动态切换逻辑"
+                "林啸周五前 ship 动态切换逻辑",
+                "**confidence decay** 作为 Memory 模块下一个正式 feature, 由王浩负责, 下周完成原型"
               ]
-            }
+            },
+            { "type": "paragraph", "text": "这个混合策略的工程复杂度比单一方案高一些, 但可以避免 latency 问题的同时保留 A 组的准确率优势." },
+            { "type": "subheading", "text": "低频关键 memory 的保护机制" },
+            { "type": "paragraph", "text": "会议结束前明明提出了一个关于风险的担忧: 如果 confidence decay 的参数调不好, 可能会出现 **\"误删有用 memory\"** 的情况 —— 特别是那些低频但关键的 memory (比如只见过一次的重要投资人). 他建议在 v1 实现里就引入一个 **\"受保护 memory\"** 的概念, 允许用户或 Agent 手动锁定某些 memory 不被自动衰减. 林啸和王浩都认可这个建议, 决定在 confidence decay 的设计里预留这个机制." }
           ]
         }
       ]

@@ -27,6 +27,12 @@ struct CommandDetailView: View {
     /// 贴在 chat 气泡下面, 跟 bubbles 属于同一张卡片.
     @State private var chatDraft: String = ""
 
+    /// 键盘焦点. 用 `@FocusState` 管理两个 text field 的焦点,
+    /// 点空白区域时设为 nil 就能收起键盘.
+    @FocusState private var focusedField: Field?
+
+    enum Field: Hashable { case emailBody, chatDraft }
+
     init(card: Card) {
         self.card = card
         self._reclass = State(initialValue: card.type)
@@ -43,6 +49,11 @@ struct CommandDetailView: View {
                 contextsSection
                 timelineSection
                 outputSection
+                // 存为草稿 / 发送 直接贴在邮件 (outputSection) 下面 ——
+                // 产品语义上它们是针对刚生成的邮件草稿的动作, 视觉上也应该和
+                // 邮件在同一个上下文里, 而不是浮在 tab bar 上方. processing
+                // 态则换成 "在后台继续 / 取消任务".
+                inlineBottomActions
                 chatSection
                 Spacer(minLength: 40)
             }
@@ -53,7 +64,14 @@ struct CommandDetailView: View {
         .background(Theme.background)
         .navigationTitle(isProcessing ? "指令 · 执行中" : "指令")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) { bottomActions }
+        // 拖 scroll 可以顺手收键盘, 对齐 iOS native 的 chat / editor 习惯
+        .scrollDismissesKeyboard(.interactively)
+        // 点空白区域也能收键盘: 在整个 content 背后铺一层透明 hit target
+        .background(
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { focusedField = nil }
+        )
     }
 
     // MARK: - Head
@@ -320,7 +338,7 @@ struct CommandDetailView: View {
                 .foregroundStyle(Theme.text)
                 .lineSpacing(4)
                 .tint(Theme.accent)
-                .scrollDismissesKeyboard(.interactively)
+                .focused($focusedField, equals: .emailBody)
         }
         .padding(14)
         .background(Theme.panel)
@@ -401,6 +419,7 @@ struct CommandDetailView: View {
                 .foregroundStyle(Theme.text)
                 .tint(Theme.accent)
                 .lineLimit(1...4)
+                .focused($focusedField, equals: .chatDraft)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(Theme.background)
@@ -452,14 +471,19 @@ struct CommandDetailView: View {
         }
     }
 
-    // MARK: - Bottom actions
+    // MARK: - Inline bottom actions
 
-    /// 对应 prototype `.detail-actions`: 一条 blur 底栏, 里面放 flex:1 的按钮.
-    /// 原来的 `.bordered` / `.borderedProminent` 是 SwiftUI 默认风格, 和
-    /// prototype 的 flat 矩形按钮差别很大, 也让 "存为草稿 / 发送" 看上去像是
-    /// 两个尺寸不一致的 pill. 现在改成全宽 flex 按钮 + 圆角 12, 和原型对齐.
+    /// 对应 prototype `.detail-actions`, 但改成 **inline 嵌在 email 下面**,
+    /// 不再用 `.safeAreaInset(edge: .bottom)` 做浮动底栏.
+    ///
+    /// 原因:
+    /// 1. 产品语义上 "存为草稿 / 发送" 是针对刚生成的邮件的动作, 和邮件放一起
+    ///    更符合上下文.
+    /// 2. 浮动底栏 + iOS 26 tab bar 的毛玻璃叠在一起视觉上会融为一体,
+    ///    用户反馈"分享 / 存草稿 / 发送 和 tab bar 连在一起很奇怪".
+    /// 3. Inline 按钮随 scroll 滚动, 不抢 tab bar 的 z-order.
     @ViewBuilder
-    private var bottomActions: some View {
+    private var inlineBottomActions: some View {
         HStack(spacing: 10) {
             if isProcessing {
                 DetailActionButton(title: "在后台继续", kind: .secondary) { }
@@ -469,10 +493,7 @@ struct CommandDetailView: View {
                 DetailActionButton(title: "发送", kind: .primary) { }
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 14)
-        .padding(.bottom, 20)
-        .background(.ultraThinMaterial)
+        .padding(.top, 2)
     }
 }
 

@@ -228,36 +228,50 @@ struct PermissionStatusEntry: Identifiable, Hashable {
 
 // MARK: - Export (s15)
 
-struct ExportOption: Identifiable, Hashable {
+/// 导出数据的两种呈现方式, 对应 prototype s15 的两个 section:
+///
+/// 1. **完整导出** (大卡片) · `FullExportCard`
+///    - Markdown 归档 (.zip) · Obsidian / Logseq 可直接导入
+///    - JSON 原始数据 (.json) · 含原 transcript + metadata, 适合迁移
+///
+/// 2. **按类型导出** (list row) · `TypedExportRow`
+///    - 只导出长录音 · 1.2 GB · 含音频
+///    - 只导出指令产出 · 8 MB
+///    - 只导出灵感 · 320 MB · 含音频
+struct FullExportCard: Identifiable, Hashable {
+    var id: Format { format }
+    let title: String
+    let description: String
+    let format: Format
+
+    enum Format: String, Hashable {
+        case markdownZip, json
+
+        var cta: String {
+            switch self {
+            case .markdownZip: "导出 .zip"
+            case .json:        "导出 .json"
+            }
+        }
+    }
+}
+
+struct TypedExportRow: Identifiable, Hashable {
     var id: Scope { scope }
     let scope: Scope
-    let format: Format
     let approxSizeMB: Int
     let includeAudio: Bool
 
     enum Scope: String, Hashable {
-        case full
         case longRecOnly
         case cmdOnly
         case ideaOnly
 
         var label: String {
             switch self {
-            case .full:        "完整数据"
-            case .longRecOnly: "仅长录音"
-            case .cmdOnly:     "仅指令产出"
-            case .ideaOnly:    "仅灵感"
-            }
-        }
-    }
-
-    enum Format: String, Hashable {
-        case markdown, json
-
-        var label: String {
-            switch self {
-            case .markdown: "Markdown"
-            case .json:     "JSON"
+            case .longRecOnly: "只导出长录音"
+            case .cmdOnly:     "只导出指令产出"
+            case .ideaOnly:    "只导出灵感"
             }
         }
     }
@@ -267,6 +281,17 @@ struct ExportOption: Identifiable, Hashable {
             return String(format: "约 %.1f GB", Double(approxSizeMB) / 1024)
         } else {
             return "约 \(approxSizeMB) MB"
+        }
+    }
+
+    /// "邮件/研究报告/代码 · 约 8 MB" 风格的 subtitle, 对应 prototype 里每行
+    /// `<div class="s">…</div>` 的完整文本.
+    var subtitle: String {
+        let sizePart = sizeDisplay
+        switch scope {
+        case .longRecOnly: return "包含音频 · \(sizePart)"
+        case .cmdOnly:     return "邮件/研究报告/代码 · \(sizePart)"
+        case .ideaOnly:    return "含音频 · \(sizePart)"
         }
     }
 }

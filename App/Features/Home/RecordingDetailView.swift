@@ -75,29 +75,32 @@ struct RecordingDetailView: View {
             }
         }
         .overlay(alignment: .bottom) { toastOverlay }
-        // 底部 actions bar (对应 prototype `<div class="detail-actions">`, rec 卡片只有一个分享按钮)
+        // 底部 actions bar (对应 prototype `<div class="detail-actions">`).
+        // 注意: 之前用 `.background(.ultraThinMaterial)` 把整条底栏做成毛玻璃,
+        // 但 iOS 26 的 tabbar 本身就是毛玻璃, 两个 material 贴在一起就"融为
+        // 一体"了. 现在改成用 `Theme.background` 做实心底色 + 底部加 padding,
+        // 让分享按钮作为一个独立 pill 浮在 tab bar 上方, 中间有一条明确的空隙.
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 10) {
-                Button {
-                    presentedSheet = .share
-                } label: {
-                    Label("分享", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Theme.typeLongRec.opacity(0.16))
-                        .foregroundStyle(Theme.typeLongRec)
-                        .overlay {
-                            Capsule()
-                                .stroke(Theme.typeLongRec.opacity(0.5), lineWidth: 0.5)
-                        }
-                        .clipShape(.capsule)
-                }
-                .buttonStyle(.plain)
+            Button {
+                presentedSheet = .share
+            } label: {
+                Label("分享", systemImage: "square.and.arrow.up")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Theme.typeLongRec.opacity(0.16))
+                    .foregroundStyle(Theme.typeLongRec)
+                    .overlay {
+                        Capsule()
+                            .stroke(Theme.typeLongRec.opacity(0.5), lineWidth: 0.5)
+                    }
+                    .clipShape(.capsule)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial)
+            .buttonStyle(.plain)
+            .padding(.horizontal, 22)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+            .background(Theme.background)
         }
     }
 

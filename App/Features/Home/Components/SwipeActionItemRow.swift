@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// 一个可"左滑拒绝"的 row 包装器, 专门给 Action Items 用.
+/// 一个可"左滑删除"的 row 包装器, 专门给 Action Items 用.
 ///
 /// ## 产品语义
 /// 对应 prototype `rejectActionItemBySwipe`:
-/// - 左滑 = "用户认为这条 AI 推断不对 / 不想做"
-/// - 所以 toast 是 "已删除 · Agent 会学习这个判断", 而不是纯粹的 "已删除"
-/// - 视觉上也要体现"学习"而不是"销毁", 所以背景用 sparkles 图标 + 副标题
-///   "学到了", 颜色是柔和的 rose 渐变而不是扁平的红色
+/// - 左滑 = 用户要把这条 action item 删掉
+/// - 语义上就是"删除", 图标用 trash, 文字"删除" —— 和 iOS 原生 Mail /
+///   Reminders 左滑保持一致
+/// - 后端顺便会把"这条被用户拒绝了"作为 Agent 的训练信号, 但这个是静默副作用,
+///   **不应该** 体现在左滑时的视觉上, 只在删除后的 toast 里提一下
 ///
 /// ## 交互阶段
 /// 1. 手指按下 + 开始移动 → 检测是否 **水平主导** (abs(dx) > abs(dy) 且 dx < 0),
@@ -78,8 +79,8 @@ struct SwipeActionItemRow<Content: View>: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // 软一点的 "Agent 学到了" 背景, 左滑时才露出来
-            learnedBackdrop
+            // iOS 原生风格的 glass 删除背景, 左滑时才露出来
+            deleteBackdrop
                 .opacity(backdropOpacity)
 
             // 实际 row 内容, 跟随手指 offset
@@ -105,7 +106,7 @@ struct SwipeActionItemRow<Content: View>: View {
         onTap()
     }
 
-    // MARK: - Learn backdrop
+    // MARK: - Delete backdrop
 
     /// 左滑拖动幅度越大, 背景越实 — 从完全透明渐进到 opacity 1.
     private var backdropOpacity: Double {
@@ -114,38 +115,37 @@ struct SwipeActionItemRow<Content: View>: View {
         return Double(distance / 120)
     }
 
-    /// 替换 prototype 里那种"扁平饱和红色 + 垃圾桶"的反馈.
-    /// 现在用:
-    /// - sparkles 图标 + "学到了" 副标题 (强调"Agent 学习", 不是破坏性删除)
-    /// - rose → 透明的水平渐变, 右边重左边轻, 视觉更柔和
-    /// - 图标 + 文字合成一个 column, 整体视觉像一个"行动标签"
-    private var learnedBackdrop: some View {
+    /// iOS 26 风格的 glass 删除背景, 对齐系统 Mail / Reminders 左滑样式:
+    /// - 背景用 `.ultraThinMaterial` 做毛玻璃, 透出底下的 panel 但做模糊
+    /// - 上面叠一层非常淡的 red tint, 提示"这是个破坏性动作"但不像原来
+    ///   的饱和红那么刺眼
+    /// - 图标用 `trash.fill`, 文字"删除" (不是"学到了"——语义上就是删除)
+    /// - 不用渐变, 不用副标题; 越简单越接近 Apple 原生
+    private var deleteBackdrop: some View {
         HStack(spacing: 0) {
             Spacer()
             VStack(spacing: 4) {
-                Image(systemName: "sparkles")
+                Image(systemName: "trash.fill")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.95))
-                Text("学到了")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.88))
-                    .tracking(0.6)
+                Text("删除")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.9))
             }
             .padding(.trailing, 22)
-            .padding(.leading, 10)
+            .padding(.leading, 14)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.82, green: 0.38, blue: 0.42).opacity(0.0),
-                    Color(red: 0.82, green: 0.38, blue: 0.42).opacity(0.35),
-                    Color(red: 0.82, green: 0.38, blue: 0.42).opacity(0.72)
-                ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
+        .background {
+            ZStack {
+                // 毛玻璃 — 透出后面 panel, 有一点点模糊; 这是 iOS 26 liquid
+                // glass 的主要视觉源头
+                Rectangle().fill(.ultraThinMaterial)
+                // 非常淡的红色 tint, 强化"破坏性"语义但不抢视觉
+                Rectangle()
+                    .fill(Color(red: 0.95, green: 0.27, blue: 0.35).opacity(0.18))
+            }
+        }
     }
 
     // MARK: - Drag gesture
