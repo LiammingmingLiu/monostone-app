@@ -12,6 +12,7 @@ import SwiftUI
 struct TodoDetailView: View {
     let card: Card
     @State private var reclass: Card.CardType
+    @State private var toastMessage: String?
 
     init(card: Card) {
         self.card = card
@@ -29,6 +30,9 @@ struct TodoDetailView: View {
                 parseResultSection
                 writtenToSection
                 conflictSection
+                // Inline bottom actions: 日程和待办的"主动作"都贴在内容底下,
+                // 不再浮在 tab bar 上方的 safeAreaInset, 避免和 tab bar 挤.
+                inlineActions
                 Spacer(minLength: 40)
             }
             .padding(.horizontal, 16)
@@ -38,7 +42,7 @@ struct TodoDetailView: View {
         .background(Theme.background)
         .navigationTitle(isEvent ? "日程" : "待办")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) { bottomActions }
+        .overlay(alignment: .bottom) { toastOverlay }
     }
 
     // MARK: - Head
@@ -295,21 +299,80 @@ struct TodoDetailView: View {
         }
     }
 
-    // MARK: - Bottom actions
+    // MARK: - Inline actions (type-aware)
 
-    /// 对应 prototype `.detail-actions` 的 flex 3 按钮. 用同一套
-    /// `DetailActionButton` 保持和其他详情页一致. 背景用 `Theme.background`
-    /// 和 iOS 26 tabbar 的毛玻璃区分开, 避免融合.
-    private var bottomActions: some View {
-        HStack(spacing: 10) {
-            DetailActionButton(title: "修改", kind: .secondary) { }
-            DetailActionButton(title: "取消", kind: .destructive) { }
-            DetailActionButton(title: "完成", kind: .primary) { }
+    /// 日程和待办的"主动作". 原来只是三个无意义的 修改 / 取消 / 完成 —— 点了
+    /// 没有任何反馈. 现在按 `isEvent` 分支:
+    ///
+    /// **日程** (todo-1 硬件供应商视频会议):
+    /// - 主: 加入会议 (去点击 Zoom / Meet 链接)
+    /// - 副: 重新安排 (改时间 — 真实实现打开 reschedule modal)
+    /// - 危险: 取消会议 (从日历里删掉)
+    ///
+    /// **待办** (todo-2):
+    /// - 主: 标记完成 (同步到 Apple 提醒事项 + Memory)
+    /// - 副: 改截止时间
+    /// - 危险: 删除
+    ///
+    /// 每个按钮点击都会触发 toast 反馈 (demo 用), 真实实现换成对应的
+    /// store mutation / deep link.
+    @ViewBuilder
+    private var inlineActions: some View {
+        if isEvent {
+            HStack(spacing: 10) {
+                DetailActionButton(title: "取消会议", kind: .destructive) {
+                    showToast("会议已取消 · 已从 Apple 日历移除")
+                }
+                DetailActionButton(title: "重新安排", kind: .secondary) {
+                    showToast("重新安排 · 打开时间选择 (demo)")
+                }
+                DetailActionButton(title: "加入会议", kind: .primary) {
+                    showToast("已打开会议链接 (demo)")
+                }
+            }
+            .padding(.top, 2)
+        } else {
+            HStack(spacing: 10) {
+                DetailActionButton(title: "删除", kind: .destructive) {
+                    showToast("已删除 · 从提醒事项移除")
+                }
+                DetailActionButton(title: "改截止时间", kind: .secondary) {
+                    showToast("改截止时间 · 打开日期选择 (demo)")
+                }
+                DetailActionButton(title: "标记完成", kind: .primary) {
+                    showToast("已完成 · 同步到 Apple 提醒事项")
+                }
+            }
+            .padding(.top, 2)
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
-        .background(Theme.background)
+    }
+
+    // MARK: - Toast
+
+    private func showToast(_ message: String) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            toastMessage = message
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(.easeIn(duration: 0.2)) { toastMessage = nil }
+        }
+    }
+
+    @ViewBuilder
+    private var toastOverlay: some View {
+        if let toastMessage {
+            Text(toastMessage)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Theme.panel)
+                .overlay { Capsule().stroke(Theme.border, lineWidth: 0.5) }
+                .clipShape(.capsule)
+                .padding(.bottom, 30)
+                .transition(.opacity.combined(with: .offset(y: 10)))
+        }
     }
 }
 
