@@ -7,13 +7,13 @@ import SwiftUI
 /// - `TodayGlance` · 今日速览卡片
 /// - `FilterChipBar` · 5 个 filter chips
 /// - `LazyVStack` · 卡片列表（store.filteredCards）
-///
-/// 未实现（后续步骤）：
-/// - FAB 浮动录音按钮（Step 8）
-/// - Action Items 嵌入 + 左滑删除（Step 7）
-/// - 打开 card 详情页（Step 6 modals + navigation）
+/// - **FAB** 右下角浮动录音按钮 (Step 8, 通过 overlay)
+///   - 快速点 → fullScreenCover 进 LongRecordingView
+///   - 按住 300ms+ → 短捕捉, 松手时首页显示 toast
 struct HomeView: View {
     @State private var store = HomeStore()
+    @State private var recordingStore = RecordingStore()
+    @State private var shortCaptureToastMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -27,6 +27,9 @@ struct HomeView: View {
                         .padding(.top, 2)
 
                     cardList
+
+                    // 给 FAB 留出滚动底部空间, 避免被最后一张卡挡住
+                    Spacer(minLength: 100)
                 }
                 .padding(.vertical, 8)
             }
@@ -36,6 +39,65 @@ struct HomeView: View {
             .navigationDestination(for: Card.self) { card in
                 RecordingDetailView(card: card, store: store)
             }
+            .overlay(alignment: .bottomTrailing) {
+                FloatingRecordButton(store: recordingStore)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 20)
+            }
+            .overlay(alignment: .bottom) { shortCaptureToast }
+            .fullScreenCover(isPresented: longRecordingBinding) {
+                LongRecordingView(store: recordingStore)
+            }
+            .onChange(of: recordingStore.lastShortCaptureId) { _, _ in
+                handleShortCaptureFinished()
+            }
+        }
+    }
+
+    // MARK: - Long recording binding
+
+    /// 把 `recordingStore.phase == .recordingLong` 转成 `Binding<Bool>`,
+    /// 以便驱动 `.fullScreenCover(isPresented:)`.
+    /// 关闭 cover 时回调 `cancelLongRecording`, 把 store 拉回 idle 状态.
+    private var longRecordingBinding: Binding<Bool> {
+        Binding(
+            get: { recordingStore.phase == .recordingLong },
+            set: { newValue in
+                if !newValue, recordingStore.phase == .recordingLong {
+                    recordingStore.cancelLongRecording()
+                }
+            }
+        )
+    }
+
+    // MARK: - Short capture toast
+
+    private func handleShortCaptureFinished() {
+        let seconds = Int(recordingStore.elapsedSeconds.rounded())
+        withAnimation(.easeOut(duration: 0.2)) {
+            shortCaptureToastMessage = "已捕捉 \(seconds) 秒 · Agent 会自动分类"
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(.easeIn(duration: 0.2)) {
+                shortCaptureToastMessage = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var shortCaptureToast: some View {
+        if let shortCaptureToastMessage {
+            Text(shortCaptureToastMessage)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.text)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Theme.panel)
+                .overlay { Capsule().stroke(Theme.accent.opacity(0.4), lineWidth: 0.5) }
+                .clipShape(.capsule)
+                .padding(.bottom, 100)
+                .transition(.opacity.combined(with: .offset(y: 10)))
         }
     }
 
