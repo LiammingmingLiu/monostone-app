@@ -22,6 +22,9 @@ struct TodayDigestText: View {
             line3
         }
         .padding(16)
+        // 填满父宽度, 否则 VStack(alignment:.leading) 只会取最长一行的宽度,
+        // 卡片缩在左边和下面的 filter chips / cards 对不齐
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.panel)
         .overlay {
             RoundedRectangle(cornerRadius: 14)
