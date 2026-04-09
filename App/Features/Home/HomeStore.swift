@@ -101,6 +101,19 @@ final class HomeStore {
         }
     }
 
+    /// 切换一条 action item 的 done 状态.
+    ///
+    /// 对应 prototype `toggleActionItem` 的语义:
+    /// - status 在 `.pending` ↔ `.done` 之间来回切
+    /// - done 态真实实现应同步到 Apple 提醒事项 + Linear + Memory, 这里只本地切
+    func toggleActionItemDone(cardId: String, itemId: String) {
+        guard var list = actionItemsByCard[cardId],
+              let idx = list.firstIndex(where: { $0.id == itemId })
+        else { return }
+        list[idx].status = list[idx].status == .done ? .pending : .done
+        actionItemsByCard[cardId] = list
+    }
+
     // MARK: - Derived state
 
     private func recomputeFiltered() {

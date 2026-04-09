@@ -430,18 +430,41 @@ struct RecordingDetailView: View {
     }
 
     private func actionItemRow(_ item: ActionItem) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Theme.typeTodo.opacity(0.6))
-                .frame(width: 3, height: 36)
+        let isDone = item.status == .done
+        return HStack(alignment: .center, spacing: 12) {
+            // Checkbox · 点击 toggle done 状态 (不触发 row 的 tap 去开 modal)
+            Button {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    store.toggleActionItemDone(cardId: card.id, itemId: item.id)
+                }
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isDone ? Theme.typeTodo : Color.clear)
+                        .frame(width: 20, height: 20)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isDone ? Theme.typeTodo : Theme.borderStrong, lineWidth: 1.5)
+                        .frame(width: 20, height: 20)
+                    if isDone {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.black)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: isDone)
+            .accessibilityLabel(isDone ? "取消完成" : "标记完成")
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.text)
                     .font(.system(size: 13.5, weight: .medium))
-                    .foregroundStyle(Theme.text)
+                    .foregroundStyle(isDone ? Theme.textDim : Theme.text)
+                    .strikethrough(isDone, color: Theme.textDim)
                     .multilineTextAlignment(.leading)
                 Text("\(item.owner) · \(item.deadline)")
                     .font(.system(size: 11))
-                    .foregroundStyle(Theme.textDim)
+                    .foregroundStyle(Theme.textDimmer)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")

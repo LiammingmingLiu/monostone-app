@@ -15,6 +15,10 @@ struct ActionItemDetailView: View {
     let onSuggestionTap: (String) -> Void
     @Environment(\.dismiss) private var dismiss
 
+    /// 默认开到 `.large`. SwiftUI 不管 `presentationDetents` 数组顺序, 默认永远选
+    /// 最小的那个, 必须通过 `selection:` binding 才能强制打开时是 `.large`.
+    @State private var detent: PresentationDetent = .large
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -22,6 +26,7 @@ struct ActionItemDetailView: View {
                     titleBlock
                     metaBlock
                     sourceQuoteBlock
+                    voicePromptBlock    // 新增: "告诉 Agent 下一步" 语音 CTA
                     suggestionsBlock
                     Spacer(minLength: 40)
                 }
@@ -41,7 +46,9 @@ struct ActionItemDetailView: View {
             }
         }
         .presentationDragIndicator(.visible)
-        .presentationDetents([.medium, .large])
+        // 默认 `.large` 直接拉满到顶, 避免只露出半屏看不到 source quote + agent
+        // suggestions. 用户仍然可以手动拖到 `.medium` 缩小.
+        .presentationDetents([.large, .medium], selection: $detent)
     }
 
     // MARK: - Subviews
@@ -79,7 +86,7 @@ struct ActionItemDetailView: View {
 
     private var sourceQuoteBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("来自会议的原话")
+            Text("从会议中摘取")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Theme.textDimmer)
                 .tracking(1.2)
@@ -105,9 +112,65 @@ struct ActionItemDetailView: View {
         }
     }
 
+    /// "告诉 Agent 下一步" 语音 CTA 提醒. 对应 prototype `.voice-prompt` 区块:
+    /// 解释性文字 + 麦克风按钮. 核心设计意图是让用户意识到"可以语音直接告诉
+    /// Agent 要做什么", 而不只是从下面的 suggestions 里挑一个.
+    private var voicePromptBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("告诉 Agent 下一步")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Theme.textDimmer)
+                .tracking(1.2)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("想让 Agent 帮你推进这条？直接用语音告诉它要做什么 —— 起草邮件、查资料、关联历史、生成分析都可以。")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Theme.text)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    onSuggestionTap("语音输入占位 · 按住戒指或首页 FAB")
+                    dismiss()
+                } label: {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Theme.accent)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: Theme.accent.opacity(0.6), radius: 4)
+                        Text("告诉 Agent 下一步")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Theme.accent)
+                        Spacer()
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(Theme.accent.opacity(0.08))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Theme.accent.opacity(0.4), lineWidth: 0.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.impact(weight: .light), trigger: item.id)
+            }
+            .padding(14)
+            .background(Theme.panel)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Theme.border, lineWidth: 0.5)
+            }
+            .clipShape(.rect(cornerRadius: 10))
+        }
+    }
+
     private var suggestionsBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Agent 建议的快捷 Prompt")
+            Text("常用的后续动作")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Theme.textDimmer)
                 .tracking(1.2)
