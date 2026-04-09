@@ -9,6 +9,9 @@ import Foundation
 ///
 /// **架构**:
 /// - `NSObject` 子类 (CoreBluetooth delegate 需要 objc)
+/// - 整个 class 标 `@MainActor` —— CoreBluetooth delegate callback 默认在 main
+///   queue 上跑 (初始化时传 `queue: nil`), 所以 @MainActor 隔离天然匹配, 不需要
+///   线程切换, 也消除了 `@unchecked Sendable` 下的 data race.
 /// - 持有 `CBCentralManager` + 单个 connected `CBPeripheral`
 /// - `AsyncStream` continuations 把 callback 桥接到 Swift Concurrency
 /// - 只连第一个广播名匹配的 peripheral, 简单策略 (未来可能扩成多戒指)
@@ -18,11 +21,12 @@ import Foundation
 /// - 暂不处理 Audio Stream characteristic (`A005`), 音频 pipeline 是独立大 feature
 /// - 没做重连退避算法, 断开后只做一次尝试
 /// - 指令 write 用 `withoutResponse`, 不等 ack (低延迟优先)
-final class BluetoothRingConnection: NSObject, RingConnection, @unchecked Sendable {
+@MainActor
+final class BluetoothRingConnection: NSObject, RingConnection {
     // MARK: - AsyncStream plumbing
 
-    let events: AsyncStream<RingEvent>
-    let stateUpdates: AsyncStream<RingConnectionState>
+    nonisolated let events: AsyncStream<RingEvent>
+    nonisolated let stateUpdates: AsyncStream<RingConnectionState>
 
     private let eventContinuation: AsyncStream<RingEvent>.Continuation
     private let stateContinuation: AsyncStream<RingConnectionState>.Continuation
@@ -55,10 +59,9 @@ final class BluetoothRingConnection: NSObject, RingConnection, @unchecked Sendab
         // 延迟到 start() 再初始化 CBCentralManager, 避免过早弹权限弹窗.
     }
 
-    deinit {
-        eventContinuation.finish()
-        stateContinuation.finish()
-    }
+    // 注: 不实现 `deinit` 显式 finish. Swift 6 严格并发下 deinit 不能访问
+    // @MainActor 属性. AsyncStream continuation 在 Stream 被 dealloc 时会
+    // 自动 finish.
 
     // MARK: - RingConnection
 
@@ -109,8 +112,13 @@ final class BluetoothRingConnection: NSObject, RingConnection, @unchecked Sendab
 }
 
 // MARK: - CBCentralManagerDelegate
+//
+// 用 `@preconcurrency` conformance: CBCentralManagerDelegate 是 Swift 6 之前的
+// API, 没有 Sendable / actor annotation. 我们在 `CBCentralManager(delegate:, queue: nil)`
+// 里传 nil queue, 保证所有 callback 在 main thread 上调用, 所以 @MainActor 类
+// 实现 delegate 方法是安全的 —— `@preconcurrency` 让编译器信任这个事实.
 
-extension BluetoothRingConnection: CBCentralManagerDelegate {
+extension BluetoothRingConnection: @preconcurrency CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOn:
@@ -170,7 +178,7 @@ extension BluetoothRingConnection: CBCentralManagerDelegate {
 
 // MARK: - CBPeripheralDelegate
 
-extension BluetoothRingConnection: CBPeripheralDelegate {
+extension BluetoothRingConnection: @preconcurrency CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral,
                     didDiscoverServices error: Error?) {
         guard error == nil, let service = peripheral.services?.first else {

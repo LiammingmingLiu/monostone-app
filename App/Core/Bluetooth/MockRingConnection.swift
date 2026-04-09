@@ -13,18 +13,23 @@ import Foundation
 /// - `send(.requestBattery)` 立即 echo 一个 battery 事件
 /// - `send(.setHaptic)` / `.stopRecording` 不做实际动作, 静默 ack
 ///
-/// 注意: Actor 隔离层面, 这是个 class 而不是 struct, 因为需要持有
-/// continuations + 可变 timer task.
-final class MockRingConnection: RingConnection, @unchecked Sendable {
+/// **Actor 隔离**: 整个 class 标 `@MainActor`, 所有 mutable state 都在 main actor
+/// 上保护. 之前用 `@unchecked Sendable` 跨 actor 访问 `isConnected` / `batteryPct`
+/// 会导致 Swift 6 严格并发下 data race → `EXC_BAD_ACCESS`. `@MainActor` 提供
+/// 自动串行化, 消除这类 crash.
+///
+/// `RingConnection` 协议要求 `Sendable`, `@MainActor` 类型隐式满足 Sendable.
+@MainActor
+final class MockRingConnection: RingConnection {
     // MARK: - AsyncStream plumbing
 
-    let events: AsyncStream<RingEvent>
-    let stateUpdates: AsyncStream<RingConnectionState>
+    nonisolated let events: AsyncStream<RingEvent>
+    nonisolated let stateUpdates: AsyncStream<RingConnectionState>
 
     private let eventContinuation: AsyncStream<RingEvent>.Continuation
     private let stateContinuation: AsyncStream<RingConnectionState>.Continuation
 
-    // MARK: - Mock state (all mutations happen on @MainActor Task)
+    // MARK: - Mock state (all mutations on @MainActor)
 
     private var isConnected = false
     private var batteryPct = 87
@@ -47,11 +52,9 @@ final class MockRingConnection: RingConnection, @unchecked Sendable {
         self.stateContinuation = stateCont
     }
 
-    deinit {
-        batteryDrainTask?.cancel()
-        eventContinuation.finish()
-        stateContinuation.finish()
-    }
+    // 注: 不实现 `deinit` 显式 finish. Swift 6 严格并发下 deinit 不能访问
+    // @MainActor 属性. AsyncStream continuation 在 Stream 被 dealloc 时会
+    // 自动 finish, 不会泄漏.
 
     // MARK: - RingConnection
 
@@ -120,10 +123,13 @@ final class MockRingConnection: RingConnection, @unchecked Sendable {
 
     private func startBatteryDrain() {
         batteryDrainTask?.cancel()
-        batteryDrainTask = Task { [weak self] in
+        // Task { @MainActor ... } 和外层 @MainActor 一致, self 访问无需 hop,
+        // 保持所有 mutable state 访问都在 main actor 上.
+        batteryDrainTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                try? await Task.sleep(for: .seconds(self.batteryDrainIntervalSec))
+                let interval = self.batteryDrainIntervalSec
+                try? await Task.sleep(for: .seconds(interval))
                 guard !Task.isCancelled, self.isConnected else { return }
                 self.batteryPct = max(0, self.batteryPct - 1)
                 if self.batteryPct <= 5 {

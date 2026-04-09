@@ -43,11 +43,12 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Monostone
-        UILaunchStoryboardName: ""
+        # iOS 14+: 用 UILaunchScreen 空字典告诉系统"这是现代 app, 用默认 launch screen".
+        # 不要用 UILaunchStoryboardName="" (空字符串) —— iOS 会去找不存在的 storyboard
+        # 然后显示纯黑屏, 这是 root view 根本没加载的主要原因.
+        UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        UIRequiredDeviceCapabilities:
-          - armv7
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIStatusBarStyle: UIStatusBarStyleLightContent
@@ -63,7 +64,8 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"  # iPhone only
         SUPPORTS_MACCATALYST: NO
-        GENERATE_INFOPLIST_FILE: YES
+        # 不加 GENERATE_INFOPLIST_FILE: 我们用自定义 Info.plist (info.path 已指定),
+        # GENERATE_INFOPLIST_FILE=YES 会让 Xcode 和自定义 plist 冲突.
 
   MonostoneAppTests:
     type: bundle.unit-test
