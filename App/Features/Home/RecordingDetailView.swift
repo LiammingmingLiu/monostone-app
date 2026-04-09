@@ -22,7 +22,12 @@ struct RecordingDetailView: View {
             VStack(alignment: .leading, spacing: 22) {
                 header
                 actions
+                participantsSection
+                structuredSummarySection
                 actionItemsSection
+                decisionsSection
+                memoryLearnedSection
+                transcriptSection
                 Spacer(minLength: 40)
             }
             .padding(.horizontal, 16)
@@ -129,6 +134,252 @@ struct RecordingDetailView: View {
             .accessibilityLabel("分享")
 
             Spacer()
+        }
+    }
+
+    // MARK: - Participants
+
+    private var participantsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("参与人")
+            HStack(spacing: 16) {
+                ForEach(participants, id: \.self) { name in
+                    VStack(spacing: 6) {
+                        Circle()
+                            .fill(Theme.panel)
+                            .overlay { Circle().stroke(Theme.borderStrong, lineWidth: 0.5) }
+                            .overlay {
+                                Text(String(name.prefix(1)))
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Theme.text)
+                            }
+                            .frame(width: 42, height: 42)
+                        Text(name)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textDim)
+                    }
+                }
+                Spacer()
+            }
+            .padding(14)
+            .background(Theme.panel)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Theme.border, lineWidth: 0.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    private var participants: [String] {
+        if card.id == "rec-2" {
+            return ["林啸", "明明", "王浩"]
+        }
+        return ["敦敏", "明明", "郑灿", "马俊"]
+    }
+
+    // MARK: - Structured summary
+
+    private var structuredSummarySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("结构化摘要")
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(summaryBullets, id: \.self) { bullet in
+                    HStack(alignment: .top, spacing: 10) {
+                        Circle()
+                            .fill(Theme.typeLongRec)
+                            .frame(width: 5, height: 5)
+                            .padding(.top, 7)
+                        Text(bullet)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(Theme.text)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 7)
+                    if bullet != summaryBullets.last {
+                        Divider().background(Theme.border)
+                    }
+                }
+                // 查看完整总结 link
+                Button {
+                    if let summary = summaryStore.summary(for: card.id) {
+                        presentedSheet = .fullSummary(summary)
+                    } else {
+                        showToast("该卡片暂无完整纪要")
+                    }
+                } label: {
+                    HStack {
+                        Text("查看完整总结")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.typeLongRec)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.typeLongRec)
+                    }
+                    .padding(.top, 10)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(14)
+            .background(Theme.panel)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Theme.border, lineWidth: 0.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    private var summaryBullets: [String] {
+        if card.id == "rec-2" {
+            return [
+                "A 组 (新 branch) 的 memory retrieval 准确率相比 baseline 提升 14%, 但 p95 latency 增加了 180ms.",
+                "B 组 (baseline) 在少样本场景更稳定, 但多会话场景下会出现 L2 记忆泄漏到其他 session.",
+                "最终决定: A/B 同时在线, 按 session 长度动态选择策略, 短会话走 baseline, 长会话走新 branch.",
+                "下一步集成 confidence decay 机制, 验证长尾 memory 的稳定性."
+            ]
+        }
+        return [
+            "Linear 对产品定义提出关键质疑: 是 infra 还是 closed-loop? 明明确认 Agent 层是闭环, 仅插件生态开放.",
+            "最大风险不是巨头入局, 而是戒指品类本身两年后没起来. 巨头入局反而是品类验证.",
+            "Linear 认为 OpenAI 是头号威胁, Apple 反而排很后.",
+            "双麦 15dB SNR 的优势要包装成 \"freestyle recording\" 营销故事."
+        ]
+    }
+
+    // MARK: - Decisions
+
+    private var decisionsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("关键决策")
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(decisions, id: \.text) { d in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(d.text)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Theme.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(d.who)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textDim)
+                    }
+                    .padding(.vertical, 9)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if d.text != decisions.last?.text {
+                        Divider().background(Theme.border)
+                    }
+                }
+            }
+            .padding(14)
+            .background(Theme.panel)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Theme.border, lineWidth: 0.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    private var decisions: [(text: String, who: String)] {
+        if card.id == "rec-2" {
+            return [
+                (text: "A/B 策略不做 hard switch, 按 session 特征动态选",
+                 who: "林啸主张, 明明认可"),
+                (text: "Memory promotion 加 confidence decay 作为正式 feature",
+                 who: "团队共识")
+            ]
+        }
+        return [
+            (text: "不做 Kickstarter, 坚持独立站 DTC",
+             who: "明明主张, Linear 支持"),
+            (text: "企业场景优先级高于家庭场景, 作为 B2B 扩展路径",
+             who: "Linear 建议, 待评估")
+        ]
+    }
+
+    // MARK: - Memory learned
+
+    private var memoryLearnedSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("本次会议学到了什么")
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(memoryLearned, id: \.self) { md in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "brain")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                            .padding(.top, 3)
+                        Text(attributedMarkdown(md))
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(Theme.text)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 8)
+                    if md != memoryLearned.last {
+                        Divider().background(Theme.border)
+                    }
+                }
+            }
+            .padding(14)
+            .background(Theme.panel)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Theme.border, lineWidth: 0.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    private var memoryLearned: [String] {
+        if card.id == "rec-2" {
+            return [
+                "**Memory A/B** 新 branch 在准确率上领先 14%",
+                "**王浩** 开始负责 Memory 模块的 confidence decay 实现",
+                "**Monostone 后端** 新增 \"长尾 memory 稳定性\" 作为关键指标"
+            ]
+        }
+        return [
+            "**敦敏** 是 Linear Capital 合伙人, 偏好 closed-loop 定位",
+            "你谈 vision 时喜欢用 **Polanyi tacit knowledge** 框架",
+            "**Marshall** 在 Linear 眼中硬件可信度很高",
+            "**Series A** 新增关键风险: 品类形成而非巨头入局"
+        ]
+    }
+
+    private func attributedMarkdown(_ markdown: String) -> AttributedString {
+        var options = AttributedString.MarkdownParsingOptions()
+        options.interpretedSyntax = .inlineOnlyPreservingWhitespace
+        return (try? AttributedString(markdown: markdown, options: options))
+            ?? AttributedString(markdown)
+    }
+
+    // MARK: - Transcript toggle
+
+    private var transcriptSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("完整转录")
+            Button { showToast("展开转录 (demo)") } label: {
+                HStack {
+                    Text(card.id == "rec-2" ? "展开 2,814 字" : "展开 4,281 字")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.text)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textDimmer)
+                }
+                .padding(14)
+                .background(Theme.panel)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Theme.border, lineWidth: 0.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
         }
     }
 

@@ -45,11 +45,21 @@ struct HomeView: View {
                 await summaryStore.refresh()
             }
             .navigationDestination(for: Card.self) { card in
-                RecordingDetailView(
-                    card: card,
-                    store: store,
-                    summaryStore: summaryStore
-                )
+                // 按卡片 type dispatch 到对应详情页. 所有 4 种类型都有专属详情 view.
+                switch card.type {
+                case .longRec:
+                    RecordingDetailView(
+                        card: card,
+                        store: store,
+                        summaryStore: summaryStore
+                    )
+                case .command:
+                    CommandDetailView(card: card)
+                case .idea:
+                    IdeaDetailView(card: card)
+                case .todo:
+                    TodoDetailView(card: card)
+                }
             }
             .overlay(alignment: .bottomTrailing) {
                 // FAB + timer label 作为整体浮在右下角
@@ -164,18 +174,12 @@ struct HomeView: View {
                         .padding(.top, 6)
 
                     ForEach(bucket.cards) { card in
-                        // Stage B 先只让 longRec 可点, stage C 会给 command/idea/todo
-                        // 创建各自的 detail view + route.
-                        Group {
-                            if card.type == .longRec {
-                                NavigationLink(value: card) {
-                                    CardRow(card: card)
-                                }
-                                .buttonStyle(.plain)
-                            } else {
-                                CardRow(card: card)
-                            }
+                        // 所有 4 种卡片类型都可点, navigationDestination 内按 type 分发到
+                        // 对应的 Detail view.
+                        NavigationLink(value: card) {
+                            CardRow(card: card)
                         }
+                        .buttonStyle(.plain)
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 8)),
                             removal: .opacity
