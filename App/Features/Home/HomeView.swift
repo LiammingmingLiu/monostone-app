@@ -20,9 +20,9 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
+                LazyVStack(alignment: .leading, spacing: 16) {
                     header
-                    TodayGlance(summary: store.summary)
+                    TodayDigestText(summary: store.summary)
                         .padding(.horizontal, 16)
 
                     FilterChipBar(store: store)
@@ -138,28 +138,49 @@ struct HomeView: View {
         return "第 \(dayCount) 天 · \(ringText) · 今日第 \(store.summary.interactionsToday) 次交互"
     }
 
+    /// 按 `Card.group` 把 filteredCards 分组, 每组前面插一个 `TimeSeparator`.
+    /// 保持 HomeStore.mockCards 里 append 的顺序 (今天→昨天), 不做字典序排序.
+    private var groupedCards: [(group: String, cards: [Card])] {
+        var seenGroups: [String] = []
+        var grouped: [String: [Card]] = [:]
+        for card in store.filteredCards {
+            if grouped[card.group] == nil {
+                seenGroups.append(card.group)
+                grouped[card.group] = []
+            }
+            grouped[card.group]?.append(card)
+        }
+        return seenGroups.map { ($0, grouped[$0] ?? []) }
+    }
+
     private var cardList: some View {
         LazyVStack(spacing: 12) {
             if store.filteredCards.isEmpty {
                 emptyState
             } else {
-                ForEach(store.filteredCards) { card in
-                    // 长录音卡片可点击进入详情页; 其他类型暂时不可点
-                    // (step 7 会把 Action Items 直接展示在 home feed 里)
-                    Group {
-                        if card.type == .longRec {
-                            NavigationLink(value: card) {
+                ForEach(Array(groupedCards.enumerated()), id: \.element.group) { _, bucket in
+                    // 时间分隔符
+                    TimeSeparator(label: bucket.group)
+                        .padding(.top, 6)
+
+                    ForEach(bucket.cards) { card in
+                        // Stage B 先只让 longRec 可点, stage C 会给 command/idea/todo
+                        // 创建各自的 detail view + route.
+                        Group {
+                            if card.type == .longRec {
+                                NavigationLink(value: card) {
+                                    CardRow(card: card)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
                                 CardRow(card: card)
                             }
-                            .buttonStyle(.plain)
-                        } else {
-                            CardRow(card: card)
                         }
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 8)),
+                            removal: .opacity
+                        ))
                     }
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .offset(y: 8)),
-                        removal: .opacity
-                    ))
                 }
             }
         }

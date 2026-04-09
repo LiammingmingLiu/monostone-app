@@ -213,76 +213,138 @@ extension HomeStore {
         ]
     ]
 
+    // 直接映射 prototype index.html 里的 9 张卡片 (5 今天 + 4 昨天).
+    // 顺序很重要, view 层按 group 分组时保持 append 顺序.
     static let mockCards: [Card] = [
+        // ===== 今天 =====
         Card(
             id: "rec-1",
             type: .longRec,
             title: "和敦敏的 Series A 跟进会",
             timeRelative: "2 小时前",
             status: .done,
+            group: "今天",
             durationSec: 42 * 60 + 18,
             participantsCount: 4,
             pendingActionCount: 3,
             owner: nil,
             deadline: nil,
             project: "Series A",
-            processingMeta: nil
+            processingMeta: nil,
+            customMetaLine: nil
         ),
         Card(
             id: "cmd-1",
             type: .command,
-            title: "起草给敦敏的 follow-up 邮件",
+            title: "\"帮我起草给敦敏的 follow-up 邮件\"",
             timeRelative: "1 小时前",
-            status: .processing,
+            status: .done,
+            group: "今天",
             durationSec: nil,
             participantsCount: nil,
             pendingActionCount: nil,
-            owner: "Agent",
-            deadline: "今天",
+            owner: nil,
+            deadline: nil,
             project: "Series A",
-            processingMeta: "Step 3 / 5 · 生成邮件正文"
+            processingMeta: nil,
+            customMetaLine: "已完成 · 调取 4 项上下文"
         ),
         Card(
             id: "idea-1",
             type: .idea,
-            title: "\"Agent 记忆泄漏\" 的修复思路",
-            timeRelative: "30 分钟前",
+            title: "Memory 的 L2→L3 promotion 可以加 confidence decay",
+            timeRelative: "45 分钟前",
             status: .done,
+            group: "今天",
             durationSec: 8,
             participantsCount: nil,
             pendingActionCount: nil,
             owner: nil,
             deadline: nil,
             project: "Monostone 后端",
-            processingMeta: nil
+            processingMeta: nil,
+            customMetaLine: "走路时 · Monostone 后端 · 关联 3 条过往"
+        ),
+        Card(
+            id: "cmd-2",
+            type: .command,
+            title: "\"帮我做 Sandbar 最新融资情况的 research\"",
+            timeRelative: "刚刚",
+            status: .processing,
+            group: "今天",
+            durationSec: nil,
+            participantsCount: nil,
+            pendingActionCount: nil,
+            owner: nil,
+            deadline: nil,
+            project: nil,
+            processingMeta: "执行中 · 联网搜索中 · 还剩约 3 分钟",
+            customMetaLine: nil
         ),
         Card(
             id: "todo-1",
             type: .todo,
             title: "周四下午 3 点去看牙医",
-            timeRelative: "昨天",
+            timeRelative: "30 分钟前",
             status: .done,
+            group: "今天",
             durationSec: nil,
             participantsCount: nil,
             pendingActionCount: nil,
-            owner: "明明",
+            owner: nil,
             deadline: "4/11 15:00",
             project: nil,
-            processingMeta: nil
+            processingMeta: nil,
+            customMetaLine: "4/11 15:00 · 已写入 Apple 日历"
+        ),
+        // ===== 昨天 =====
+        Card(
+            id: "idea-2",
+            type: .idea,
+            title: "戒指 onboarding 可以加一步 LinkedIn 导入, 让 Day 1 就有 context",
+            timeRelative: "22:14",
+            status: .done,
+            group: "昨天",
+            durationSec: 11,
+            participantsCount: nil,
+            pendingActionCount: nil,
+            owner: nil,
+            deadline: nil,
+            project: "Monostone iOS",
+            processingMeta: nil,
+            customMetaLine: "开车时 · Monostone iOS"
         ),
         Card(
             id: "rec-2",
             type: .longRec,
             title: "林啸 Memory A/B 对比测试评审",
-            timeRelative: "昨天",
+            timeRelative: "16:40",
             status: .done,
+            group: "昨天",
             durationSec: 28 * 60 + 4,
             participantsCount: 3,
             pendingActionCount: 3,
             owner: nil,
             deadline: nil,
-            project: "Monostone 后端 · Memory",
-            processingMeta: nil
+            project: "Monostone 后端",
+            processingMeta: nil,
+            customMetaLine: nil
+        ),
+        Card(
+            id: "todo-2",
+            type: .todo,
+            title: "提醒 Marshall 周五之前锁定 ODM 供应商",
+            timeRelative: "11:20",
+            status: .done,
+            group: "昨天",
+            durationSec: nil,
+            participantsCount: nil,
+            pendingActionCount: nil,
+            owner: "Marshall",
+            deadline: "4/12 之前",
+            project: "Series A · 硬件",
+            processingMeta: nil,
+            customMetaLine: "4/12 之前 · 已写入 Linear"
         )
     ]
 }
@@ -298,17 +360,21 @@ extension Card {
         return String(format: "%d:%02d", minutes, seconds)
     }
 
-    /// 首页卡片下方的 meta 行内容，根据类型拼出 e.g.
-    /// - longRec: "42:18 · 4 人 · 3 项待办"
-    /// - command: "Agent · 今天"
-    /// - idea:    "0:08 · Monostone 后端"
-    /// - todo:    "明明 · 4/11 15:00"
+    /// 首页卡片下方的 meta 行内容. 优先用 `customMetaLine`, 否则按类型派生.
+    /// - longRec 派生: "42:18 · 4 人 · Series A · 3 项待办"
+    /// - command 派生: "Agent · 今天"
+    /// - idea 派生:    "0:08 · Monostone 后端"
+    /// - todo 派生:    "明明 · 4/11 15:00"
     var metaLine: String {
+        if let custom = customMetaLine, !custom.isEmpty {
+            return custom
+        }
         switch type {
         case .longRec:
             var parts: [String] = []
             if let d = durationDisplay { parts.append(d) }
             if let n = participantsCount { parts.append("\(n) 人") }
+            if let p = project { parts.append(p) }
             if let p = pendingActionCount, p > 0 { parts.append("\(p) 项待办") }
             return parts.joined(separator: " · ")
         case .command:

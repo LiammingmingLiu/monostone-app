@@ -16,6 +16,10 @@ struct Card: Identifiable, Hashable, Codable {
     let timeRelative: String
     let status: CardStatus
 
+    /// 时间分组, "今天" / "昨天" / "本周" 等, view 层做 section grouping 用.
+    /// 对应 prototype 首页的 `.time-sep`.
+    let group: String
+
     /// 仅 `.longRec` 有意义：录音时长
     let durationSec: Int?
     /// 仅 `.longRec` 有意义：参与人数
@@ -32,6 +36,11 @@ struct Card: Identifiable, Hashable, Codable {
 
     /// 处理中的描述文案（status == .processing 时显示）
     let processingMeta: String?
+
+    /// 可选的自定义 meta 显示行 (例如指令卡"已完成 · 调取 4 项上下文",
+    /// 灵感卡"走路时 · Monostone 后端 · 关联 3 条过往").
+    /// 如果为 nil, view 层会用默认的 `metaLine` 派生逻辑.
+    let customMetaLine: String?
 
     var tint: Tint { type.tint }
 
@@ -65,9 +74,9 @@ struct Card: Identifiable, Hashable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, type, title, timeRelative, status,
+        case id, type, title, timeRelative, status, group,
              durationSec, participantsCount, pendingActionCount,
-             owner, deadline, project, processingMeta
+             owner, deadline, project, processingMeta, customMetaLine
     }
 }
 
