@@ -9,6 +9,7 @@ import Observation
 @MainActor
 final class AgentStore {
     private(set) var conversation: AgentConversation
+    private(set) var lastLoadError: Error?
 
     /// 用户正在输入的文本（用于 ChatInputBar）
     var draftMessage: String = ""
@@ -21,8 +22,29 @@ final class AgentStore {
         } ?? false
     }
 
-    init(conversation: AgentConversation = AgentStore.mockConversation) {
+    // MARK: - Dependencies
+
+    private let repository: any AgentRepository
+
+    // MARK: - Init
+
+    init(
+        repository: any AgentRepository = InMemoryAgentRepository(),
+        conversation: AgentConversation = AgentStore.mockConversation
+    ) {
+        self.repository = repository
         self.conversation = conversation
+    }
+
+    // MARK: - Async loading
+
+    func refresh() async {
+        do {
+            self.conversation = try await repository.loadCurrentConversation()
+            self.lastLoadError = nil
+        } catch {
+            self.lastLoadError = error
+        }
     }
 
     // MARK: - Actions

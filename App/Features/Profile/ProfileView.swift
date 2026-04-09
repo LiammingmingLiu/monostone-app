@@ -25,6 +25,7 @@ struct ProfileView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .toolbarVisibility(.hidden, for: .navigationBar)
+            .task { await store.refresh() }
             .navigationDestination(for: ProfileDestination.self) { dest in
                 destinationView(for: dest)
             }

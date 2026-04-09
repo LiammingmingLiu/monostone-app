@@ -36,6 +36,7 @@ struct MemoryView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .toolbarVisibility(.hidden, for: .navigationBar)
+            .task { await store.refresh() }
             .alert(
                 tappedEntity?.name ?? "",
                 isPresented: $showEntityAlert,

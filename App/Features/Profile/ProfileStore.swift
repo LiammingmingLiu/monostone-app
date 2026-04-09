@@ -12,6 +12,7 @@ final class ProfileStore {
 
     private(set) var user: UserProfile
     private(set) var ring: RingConnectionStatus
+    private(set) var lastLoadError: Error?
 
     // MARK: - Delivery targets (s11)
 
@@ -36,7 +37,7 @@ final class ProfileStore {
 
     // MARK: - Export (s15)
 
-    let exportOptions: [ExportOption]
+    var exportOptions: [ExportOption]
 
     // MARK: - Advanced (s16)
 
@@ -44,9 +45,14 @@ final class ProfileStore {
     var hardwareSettings: HardwareSettingsConfig
     var devSettings: DevSettingsConfig
 
+    // MARK: - Dependencies
+
+    private let repository: any ProfileRepository
+
     // MARK: - Init
 
-    init() {
+    init(repository: any ProfileRepository = InMemoryProfileRepository()) {
+        self.repository = repository
         self.user = UserProfile(
             id: "u-mingming",
             name: "明明",
@@ -135,5 +141,32 @@ final class ProfileStore {
             mockRing: false,
             localCacheSizeMB: 480
         )
+    }
+
+    // MARK: - Async loading
+
+    /// 从 repository 拉取全部 profile + settings 数据, 覆盖当前 state.
+    func refresh() async {
+        do {
+            let snap = try await repository.loadSnapshot()
+            self.user = snap.user
+            self.ring = snap.ring
+            self.deliveryTargets = snap.deliveryTargets
+            self.apiKeys = snap.apiKeys
+            self.availableModels = snap.availableModels
+            self.defaultModelId = snap.defaultModelId
+            self.calendarConnections = snap.calendarConnections
+            self.reminderPolicy = snap.reminderPolicy
+            self.audioStorage = snap.audioStorage
+            self.retentionPeriod = snap.retentionPeriod
+            self.permissions = snap.permissions
+            self.exportOptions = snap.exportOptions
+            self.classificationPolicy = snap.classificationPolicy
+            self.hardwareSettings = snap.hardwareSettings
+            self.devSettings = snap.devSettings
+            self.lastLoadError = nil
+        } catch {
+            self.lastLoadError = error
+        }
     }
 }

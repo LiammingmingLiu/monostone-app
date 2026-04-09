@@ -1,0 +1,172 @@
+{
+  "cards": [
+    {
+      "id": "rec-1",
+      "type": "longRec",
+      "title": "和敦敏的 Series A 跟进会",
+      "time_relative": "2 小时前",
+      "status": "done",
+      "duration_sec": 2538,
+      "participants_count": 4,
+      "pending_action_count": 3,
+      "owner": null,
+      "deadline": null,
+      "project": "Series A",
+      "processing_meta": null
+    },
+    {
+      "id": "cmd-1",
+      "type": "command",
+      "title": "起草给敦敏的 follow-up 邮件",
+      "time_relative": "1 小时前",
+      "status": "processing",
+      "duration_sec": null,
+      "participants_count": null,
+      "pending_action_count": null,
+      "owner": "Agent",
+      "deadline": "今天",
+      "project": "Series A",
+      "processing_meta": "Step 3 / 5 · 生成邮件正文"
+    },
+    {
+      "id": "idea-1",
+      "type": "idea",
+      "title": "\"Agent 记忆泄漏\" 的修复思路",
+      "time_relative": "30 分钟前",
+      "status": "done",
+      "duration_sec": 8,
+      "participants_count": null,
+      "pending_action_count": null,
+      "owner": null,
+      "deadline": null,
+      "project": "Monostone 后端",
+      "processing_meta": null
+    },
+    {
+      "id": "todo-1",
+      "type": "todo",
+      "title": "周四下午 3 点去看牙医",
+      "time_relative": "昨天",
+      "status": "done",
+      "duration_sec": null,
+      "participants_count": null,
+      "pending_action_count": null,
+      "owner": "明明",
+      "deadline": "4/11 15:00",
+      "project": null,
+      "processing_meta": null
+    },
+    {
+      "id": "rec-2",
+      "type": "longRec",
+      "title": "林啸 Memory A/B 对比测试评审",
+      "time_relative": "昨天",
+      "status": "done",
+      "duration_sec": 1684,
+      "participants_count": 3,
+      "pending_action_count": 3,
+      "owner": null,
+      "deadline": null,
+      "project": "Monostone 后端 · Memory",
+      "processing_meta": null
+    }
+  ],
+  "action_items_by_card": {
+    "rec-1": [
+      {
+        "id": "ai-1",
+        "card_id": "rec-1",
+        "text": "Marshall 锁定 ODM 合作方",
+        "owner": "Marshall",
+        "deadline": "4 月底",
+        "source_quote": "Marshall 你周五前要把 ODM 供应商的事情定下来, 不然影响后面的节奏. 我们不能再拖了, 下轮融资前必须要有一个明确的交付节奏.",
+        "source_card": "和敦敏的 Series A 跟进会",
+        "source_time": "14:32",
+        "agent_suggestions": [
+          "帮我起草一封 follow-up 邮件给 Marshall, 语气温和但要给明确节奏",
+          "查一下我们目前评估过的 ODM 候选有哪些, 各自的优劣",
+          "关联一下上次的硬件 roadmap 讨论, 看看 ODM 选型会影响到哪些节点"
+        ],
+        "status": "pending"
+      },
+      {
+        "id": "ai-2",
+        "card_id": "rec-1",
+        "text": "把双麦 SNR 数据整理成 marketing 故事",
+        "owner": "石慧",
+        "deadline": "本周",
+        "source_quote": "石慧你帮我把双麦 15dB 的数据提炼一下, 不要用技术语言 —— 改成 freestyle recording 的场景故事, 走路、开车、户外都能清晰录音.",
+        "source_card": "和敦敏的 Series A 跟进会",
+        "source_time": "27:18",
+        "agent_suggestions": [
+          "帮我拉一下最近三次户外录音测试的 SNR 数据, 整理成表格",
+          "写一版 \"freestyle recording\" 的场景故事草稿, 三段就好",
+          "查一下竞品 Sandbar、Humane 他们是怎么讲录音清晰度的"
+        ],
+        "status": "pending"
+      },
+      {
+        "id": "ai-3",
+        "card_id": "rec-1",
+        "text": "研究 EO 14117 美国数据法规",
+        "owner": "明明",
+        "deadline": "下周前",
+        "source_quote": "明明你抽空看一下 EO 14117, 这是美国对涉及敏感个人数据的外国控制技术的限制, 可能影响 Monostone 进入美国市场的策略. 下周前给我一份简短的分析.",
+        "source_card": "和敦敏的 Series A 跟进会",
+        "source_time": "38:45",
+        "agent_suggestions": [
+          "帮我查 EO 14117 最近 3 个月的执行动态",
+          "找一下做 AI 硬件的中国公司是怎么应对这个法规的",
+          "生成一份 1 页纸分析给 Linear 的合规团队"
+        ],
+        "status": "pending"
+      }
+    ],
+    "rec-2": [
+      {
+        "id": "ai-4",
+        "card_id": "rec-2",
+        "text": "上线 A/B 动态切换逻辑",
+        "owner": "林啸",
+        "deadline": "周五前",
+        "source_quote": "那我本周把动态切换逻辑 ship 出去. 短会话走 baseline, 长会话走 A 组, 这样 latency 和准确率都不损失.",
+        "source_card": "林啸 Memory A/B 对比测试评审",
+        "source_time": "18:22",
+        "agent_suggestions": [
+          "帮我看一下当前动态切换的代码 diff 和测试覆盖",
+          "起草一份上线公告给团队, 说清楚为什么要动态切换",
+          "设定一个周四的提醒, 跟进林啸的上线进度"
+        ],
+        "status": "pending"
+      },
+      {
+        "id": "ai-5",
+        "card_id": "rec-2",
+        "text": "集成 confidence decay 机制",
+        "owner": "王浩",
+        "deadline": "下周",
+        "source_quote": "王浩你把 confidence decay 的 v1 做出来, 先用指数衰减, 参数粗调. 记得预留受保护 memory 的锁定机制.",
+        "source_card": "林啸 Memory A/B 对比测试评审",
+        "source_time": "21:10",
+        "agent_suggestions": [
+          "帮我找关于 SM-2 算法和 Ebbinghaus 遗忘曲线的权威资料",
+          "列一个 v1 confidence decay 的 task breakdown, 按优先级",
+          "关联到之前明明走路时的那条灵感录音"
+        ],
+        "status": "pending"
+      }
+    ]
+  },
+  "summary": {
+    "greeting": "早上好，明明",
+    "day_count": 12,
+    "ring_connected": true,
+    "interactions_today": 8,
+    "time_saved_minutes": 47,
+    "interaction_breakdown": {
+      "walking": 3,
+      "post_meeting": 3,
+      "at_desk": 2
+    }
+  }
+}

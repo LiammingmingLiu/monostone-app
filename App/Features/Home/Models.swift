@@ -9,7 +9,7 @@ import Foundation
 /// - `.command` 指令（让 Agent 做事）
 /// - `.idea`    灵感（短 capture）
 /// - `.todo`    待办（日程 / 提醒）
-struct Card: Identifiable, Hashable {
+struct Card: Identifiable, Hashable, Codable {
     let id: String
     let type: CardType
     let title: String
@@ -35,7 +35,7 @@ struct Card: Identifiable, Hashable {
 
     var tint: Tint { type.tint }
 
-    enum CardType: String, Hashable {
+    enum CardType: String, Hashable, Codable {
         case longRec
         case command
         case idea
@@ -53,15 +53,21 @@ struct Card: Identifiable, Hashable {
         var tint: Tint { .init(kind: self) }
     }
 
-    enum CardStatus: Hashable {
+    enum CardStatus: String, Hashable, Codable {
         case done
         case processing
         case failed
     }
 
-    /// 卡片类型对应的前景色
+    /// 卡片类型对应的前景色 (不进 JSON, 只是 view 侧的派生)
     struct Tint: Hashable {
         let kind: CardType
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, type, title, timeRelative, status,
+             durationSec, participantsCount, pendingActionCount,
+             owner, deadline, project, processingMeta
     }
 }
 
@@ -108,7 +114,7 @@ enum FilterType: String, Hashable, CaseIterable, Identifiable {
 ///
 /// 对应 prototype `data-models.md §6 ActionItem`.
 /// Step 7 会加左滑删除手势, 这里先只放数据模型.
-struct ActionItem: Identifiable, Hashable {
+struct ActionItem: Identifiable, Hashable, Codable {
     let id: String
     let cardId: String
     let text: String
@@ -124,7 +130,7 @@ struct ActionItem: Identifiable, Hashable {
     let agentSuggestions: [String]
     var status: Status = .pending
 
-    enum Status: Hashable {
+    enum Status: String, Hashable, Codable {
         case pending
         case done
         case rejected
@@ -135,7 +141,7 @@ struct ActionItem: Identifiable, Hashable {
 
 /// 今日速览数据，显示在 home feed 顶部.
 /// 对应 prototype `data-models.md §10 DailySummary`.
-struct DailySummary: Hashable {
+struct DailySummary: Hashable, Codable {
     let greeting: String
     let dayCount: Int
     let ringConnected: Bool
@@ -143,7 +149,7 @@ struct DailySummary: Hashable {
     let timeSavedMinutes: Int
     let interactionBreakdown: InteractionBreakdown
 
-    struct InteractionBreakdown: Hashable {
+    struct InteractionBreakdown: Hashable, Codable {
         let walking: Int
         let postMeeting: Int
         let atDesk: Int

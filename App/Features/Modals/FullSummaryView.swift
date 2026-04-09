@@ -106,6 +106,6 @@ struct FullSummaryView: View {
 }
 
 #Preview {
-    FullSummaryView(summary: FullSummaryStore.mockSummaries["rec-1"]!)
+    FullSummaryView(summary: FullSummaryStore.seedSummaries["rec-1"]!)
         .preferredColorScheme(.dark)
 }

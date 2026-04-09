@@ -14,6 +14,7 @@ final class MemoryStore {
     private(set) var insights: [MemoryInsight]
     private(set) var entities: [MemoryEntity]
     private(set) var corrections: [CorrectionRecord]
+    private(set) var lastLoadError: Error?
 
     // MARK: - Derived
 
@@ -29,16 +30,39 @@ final class MemoryStore {
         return "\(totalEntities) 个实体 · \(sedimentedText) 条沉淀 · 今天新增 \(newToday) 条"
     }
 
+    // MARK: - Dependencies
+
+    private let repository: any MemoryRepository
+
     // MARK: - Init
 
-    init(stats: MemoryTreeStats = MemoryStore.mockStats,
-         insights: [MemoryInsight] = MemoryStore.mockInsights,
-         entities: [MemoryEntity] = MemoryStore.mockEntities,
-         corrections: [CorrectionRecord] = MemoryStore.mockCorrections) {
+    init(
+        repository: any MemoryRepository = InMemoryMemoryRepository(),
+        stats: MemoryTreeStats = MemoryStore.mockStats,
+        insights: [MemoryInsight] = MemoryStore.mockInsights,
+        entities: [MemoryEntity] = MemoryStore.mockEntities,
+        corrections: [CorrectionRecord] = MemoryStore.mockCorrections
+    ) {
+        self.repository = repository
         self.stats = stats
         self.insights = insights
         self.entities = entities
         self.corrections = corrections
+    }
+
+    // MARK: - Async loading
+
+    func refresh() async {
+        do {
+            let overview = try await repository.loadOverview()
+            self.stats = overview.stats
+            self.insights = overview.insights
+            self.entities = overview.entities
+            self.corrections = overview.corrections
+            self.lastLoadError = nil
+        } catch {
+            self.lastLoadError = error
+        }
     }
 }
 

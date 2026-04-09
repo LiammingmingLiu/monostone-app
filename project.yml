@@ -34,8 +34,11 @@ targets:
     platform: iOS
     sources:
       - path: App
+        excludes:
+          - "Resources/MockData/**"
     resources:
       - path: App/Assets.xcassets
+      - path: App/Resources/MockData
     info:
       path: App/Info.plist
       properties:

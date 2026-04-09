@@ -12,6 +12,7 @@ import SwiftUI
 ///   - 按住 300ms+ → 短捕捉, 松手时首页显示 toast
 struct HomeView: View {
     @State private var store = HomeStore()
+    @State private var summaryStore = FullSummaryStore()
     @State private var recordingStore = RecordingStore()
     @State private var shortCaptureToastMessage: String?
 
@@ -36,8 +37,18 @@ struct HomeView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .toolbarVisibility(.hidden, for: .navigationBar)
+            .task {
+                // Step 9: 从 repository 异步刷新. 默认 BundleHomeRepository
+                // 读 `home.json`, BundleFullSummaryRepository 读 `full_summaries.json`.
+                await store.refresh()
+                await summaryStore.refresh()
+            }
             .navigationDestination(for: Card.self) { card in
-                RecordingDetailView(card: card, store: store)
+                RecordingDetailView(
+                    card: card,
+                    store: store,
+                    summaryStore: summaryStore
+                )
             }
             .overlay(alignment: .bottomTrailing) {
                 FloatingRecordButton(store: recordingStore)

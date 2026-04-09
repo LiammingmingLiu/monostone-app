@@ -11,6 +11,7 @@ import SwiftUI
 struct RecordingDetailView: View {
     let card: Card
     let store: HomeStore
+    let summaryStore: FullSummaryStore
 
     // 单一 state 驱动所有 3 个 modals (enum-based sheet pattern)
     @State private var presentedSheet: SheetDestination?
@@ -97,7 +98,7 @@ struct RecordingDetailView: View {
     private var actions: some View {
         HStack(spacing: 10) {
             Button {
-                if let summary = FullSummaryStore.summary(for: card.id) {
+                if let summary = summaryStore.summary(for: card.id) {
                     presentedSheet = .fullSummary(summary)
                 } else {
                     showToast("该卡片暂无完整纪要")
@@ -252,7 +253,8 @@ enum SheetDestination: Identifiable {
     NavigationStack {
         RecordingDetailView(
             card: HomeStore.mockCards.first { $0.type == .longRec }!,
-            store: HomeStore()
+            store: HomeStore(),
+            summaryStore: FullSummaryStore()
         )
     }
     .preferredColorScheme(.dark)

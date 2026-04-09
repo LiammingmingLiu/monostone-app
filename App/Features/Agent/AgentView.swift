@@ -34,6 +34,7 @@ struct AgentView: View {
             .background(Theme.background)
             .toolbarVisibility(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) { toastOverlay }
+            .task { await store.refresh() }
         }
     }
 

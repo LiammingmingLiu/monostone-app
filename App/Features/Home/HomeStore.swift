@@ -3,9 +3,12 @@ import Observation
 
 /// 首页的 @Observable store
 ///
-/// - 持有 mock 数据, 未来替换成 URLSession / async fetch
+/// - 初始化时立即用 Swift 字面量 mock 数据 seed, 保证**冷启动零等待**
+/// - `.task { await store.refresh() }` 从 repository 异步刷新,
+///   Step 9 的 `BundleHomeRepository` 读的是 bundle 里的 `home.json`,
+///   未来切到 `URLHomeRepository` 只换 init 的参数, 业务逻辑零改动
 /// - `filteredCards` 是派生视图, store 内部缓存, 避免在 view 里 inline `.filter()`
-///   （list-patterns.md 规则: 不允许在 ForEach 上直接 filter）
+///   (list-patterns.md 规则: 不允许在 ForEach 上直接 filter)
 @Observable
 @MainActor
 final class HomeStore {
@@ -16,19 +19,50 @@ final class HomeStore {
     }
     private(set) var cards: [Card]
     private(set) var filteredCards: [Card]
-    let summary: DailySummary
+    private(set) var summary: DailySummary
     /// 按 cardId 索引的 action items; 只有 `type == .longRec` 的卡片会有
     var actionItemsByCard: [String: [ActionItem]]
 
+    /// 最近一次 `refresh()` 的错误, view 层可选展示
+    private(set) var lastLoadError: Error?
+
+    // MARK: - Dependencies
+
+    private let repository: any HomeRepository
+
     // MARK: - Init
 
-    init(cards: [Card] = HomeStore.mockCards,
-         summary: DailySummary = HomeStore.mockSummary,
-         actionItemsByCard: [String: [ActionItem]] = HomeStore.mockActionItems) {
+    /// 初始化 store. `cards` / `summary` / `actionItemsByCard` 的默认值是 Swift
+    /// 字面量 mock, 保证 view 构造时立即有数据可以渲染; 之后调 `refresh()` 从
+    /// repository 覆盖掉.
+    init(
+        repository: any HomeRepository = BundleHomeRepository(),
+        cards: [Card] = HomeStore.mockCards,
+        summary: DailySummary = HomeStore.mockSummary,
+        actionItemsByCard: [String: [ActionItem]] = HomeStore.mockActionItems
+    ) {
+        self.repository = repository
         self.cards = cards
         self.summary = summary
         self.filteredCards = cards
         self.actionItemsByCard = actionItemsByCard
+    }
+
+    // MARK: - Async loading
+
+    /// 从 repository 异步拉取最新的 HomeFeed, 整体替换当前 state.
+    /// 失败时保留现有 state, 只把 error 记到 `lastLoadError`.
+    func refresh() async {
+        do {
+            let feed = try await repository.loadFeed()
+            self.cards = feed.cards
+            self.summary = feed.summary
+            self.actionItemsByCard = feed.actionItemsByCard
+            recomputeFiltered()
+            lastLoadError = nil
+        } catch {
+            lastLoadError = error
+        }
     }
 
     // MARK: - Action item helpers
