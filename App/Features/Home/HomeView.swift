@@ -71,18 +71,35 @@ struct HomeView: View {
                     .padding(.bottom, 20)
             }
             .overlay(alignment: .bottom) { shortCaptureToast }
-            .onChange(of: recordingStore.lastShortCaptureId) { _, _ in
+            // 短捕捉结束 → Agent mock 分类 → 插入新卡 + toast
+            .onChange(of: recordingStore.lastShortCaptureId) { _, newValue in
+                guard newValue != nil else { return }
                 handleShortCaptureFinished()
+            }
+            // 长录音停止 → 插入一张新的 .longRec 卡片到 feed 顶部
+            .onChange(of: recordingStore.lastLongRecordingId) { _, newValue in
+                guard newValue != nil else { return }
+                handleLongRecordingFinished()
             }
         }
     }
 
-    // MARK: - Short capture toast
+    // MARK: - Recording finished handlers
 
-    private func handleShortCaptureFinished() {
-        let seconds = Int(recordingStore.elapsedSeconds.rounded())
+    /// 快速点 FAB → 长录音开始 → 再次点 FAB 停止 → 本方法被调用,
+    /// 在 feed 顶部插入一张 `.longRec` 卡片.
+    private func handleLongRecordingFinished() {
+        let seconds = recordingStore.lastCaptureDurationSec
+        // 小于 2 秒的录音视为误触, 不插卡, 不弹 toast
+        guard seconds >= 2 else { return }
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+            store.insertNewCapturedCard(type: .longRec, durationSec: seconds)
+        }
+
+        let timeText = formatDuration(seconds)
         withAnimation(.easeOut(duration: 0.2)) {
-            shortCaptureToastMessage = "已捕捉 \(seconds) 秒 · Agent 会自动分类"
+            shortCaptureToastMessage = "新增长录音 \(timeText) · 正在结构化"
         }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
@@ -90,6 +107,43 @@ struct HomeView: View {
                 shortCaptureToastMessage = nil
             }
         }
+    }
+
+    /// 按住 FAB 做短捕捉, 松手后走这里.
+    ///
+    /// 真实实现: 上传音频给后端, 后端 Agent 返回 `{type: cmd|idea|todo, ...}`
+    /// Demo: 本地随机挑一个分类, 让首页能看到三种新卡片都可能出现.
+    private func handleShortCaptureFinished() {
+        let seconds = recordingStore.lastCaptureDurationSec
+        guard seconds >= 1 else { return }
+
+        // Mock 分类: 均匀随机从 cmd / idea / todo 里挑一个
+        let classified: Card.CardType = [.command, .idea, .todo]
+            .randomElement() ?? .idea
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+            store.insertNewCapturedCard(type: classified, durationSec: seconds)
+        }
+
+        withAnimation(.easeOut(duration: 0.2)) {
+            shortCaptureToastMessage = "已捕捉 \(seconds) 秒 · Agent 判断为\(classified.label)"
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(.easeIn(duration: 0.2)) {
+                shortCaptureToastMessage = nil
+            }
+        }
+    }
+
+    /// 把秒数格式化成 "m:ss" 或 "X 秒" —— 短的用"秒"直观, 长的用 mm:ss.
+    private func formatDuration(_ seconds: Int) -> String {
+        if seconds < 60 {
+            return "\(seconds) 秒"
+        }
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%d:%02d", m, s)
     }
 
     @ViewBuilder

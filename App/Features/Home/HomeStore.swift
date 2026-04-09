@@ -114,6 +114,106 @@ final class HomeStore {
         actionItemsByCard[cardId] = list
     }
 
+    // MARK: - Insert new captured card
+
+    /// 在 feed 顶部插入一张刚捕捉的新卡片.
+    ///
+    /// 触发路径:
+    /// - **快速点 FAB** → 长录音停止 → `RecordingStore.lastLongRecordingId`
+    ///   change → HomeView 调本方法, `type = .longRec`
+    /// - **按住 FAB** → 短捕捉松手 → `lastShortCaptureId` change → HomeView
+    ///   本地做一次 mock 分类 (cmd/idea/todo), 然后调本方法
+    ///
+    /// 新卡片被设为 `.processing` 状态 + 对应的 `processingMeta` 文案,
+    /// 模拟"Agent 正在后台结构化 / 匹配上下文" 的状态.
+    func insertNewCapturedCard(type: Card.CardType, durationSec: Int) {
+        let newCard = Self.makeCapturedCard(type: type, durationSec: durationSec)
+        cards.insert(newCard, at: 0)
+        recomputeFiltered()
+    }
+
+    /// 构造一张"刚捕捉"的卡片. 每种类型有专属的占位标题 + processingMeta,
+    /// 让用户一眼看出"这张卡是刚刚录的, Agent 还在处理".
+    private static func makeCapturedCard(
+        type: Card.CardType,
+        durationSec: Int
+    ) -> Card {
+        // 用 UUID 前 8 位做 id, 避免和 mock 数据里的固定 id (rec-1 等) 冲突
+        let shortId = UUID().uuidString.prefix(8).lowercased()
+        let id = "\(type.rawValue)-\(shortId)"
+
+        switch type {
+        case .longRec:
+            return Card(
+                id: id,
+                type: .longRec,
+                title: "刚录制的长录音",
+                timeRelative: "刚刚",
+                status: .processing,
+                group: "今天",
+                durationSec: durationSec,
+                participantsCount: nil,
+                pendingActionCount: nil,
+                owner: nil,
+                deadline: nil,
+                project: nil,
+                processingMeta: "正在结构化 · 提取参与人、要点、action items…",
+                customMetaLine: nil
+            )
+        case .command:
+            return Card(
+                id: id,
+                type: .command,
+                title: "\"刚捕捉的指令\"",
+                timeRelative: "刚刚",
+                status: .processing,
+                group: "今天",
+                durationSec: nil,
+                participantsCount: nil,
+                pendingActionCount: nil,
+                owner: nil,
+                deadline: nil,
+                project: nil,
+                processingMeta: "Agent 判断中 · 匹配上下文…",
+                customMetaLine: nil
+            )
+        case .idea:
+            return Card(
+                id: id,
+                type: .idea,
+                title: "刚捕捉的灵感",
+                timeRelative: "刚刚",
+                status: .processing,
+                group: "今天",
+                durationSec: durationSec,
+                participantsCount: nil,
+                pendingActionCount: nil,
+                owner: nil,
+                deadline: nil,
+                project: nil,
+                processingMeta: "关联相似灵感中…",
+                customMetaLine: nil
+            )
+        case .todo:
+            return Card(
+                id: id,
+                type: .todo,
+                title: "刚捕捉的待办",
+                timeRelative: "刚刚",
+                status: .processing,
+                group: "今天",
+                durationSec: nil,
+                participantsCount: nil,
+                pendingActionCount: nil,
+                owner: nil,
+                deadline: nil,
+                project: nil,
+                processingMeta: "解析时间和地点中…",
+                customMetaLine: nil
+            )
+        }
+    }
+
     // MARK: - Derived state
 
     private func recomputeFiltered() {
