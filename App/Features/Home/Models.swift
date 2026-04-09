@@ -102,6 +102,35 @@ enum FilterType: String, Hashable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - ActionItem
+
+/// 一条长录音卡片衍生出的待办项.
+///
+/// 对应 prototype `data-models.md §6 ActionItem`.
+/// Step 7 会加左滑删除手势, 这里先只放数据模型.
+struct ActionItem: Identifiable, Hashable {
+    let id: String
+    let cardId: String
+    let text: String
+    let owner: String
+    let deadline: String
+    /// 来自会议的原话引用
+    let sourceQuote: String
+    /// 来源卡片标题（冗余字段）
+    let sourceCard: String
+    /// 时间戳 e.g. "14:32"
+    let sourceTime: String
+    /// 3 条 context-aware 的 Agent prompt 建议
+    let agentSuggestions: [String]
+    var status: Status = .pending
+
+    enum Status: Hashable {
+        case pending
+        case done
+        case rejected
+    }
+}
+
 // MARK: - DailySummary
 
 /// 今日速览数据，显示在 home feed 顶部.

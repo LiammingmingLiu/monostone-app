@@ -17,14 +17,28 @@ final class HomeStore {
     private(set) var cards: [Card]
     private(set) var filteredCards: [Card]
     let summary: DailySummary
+    /// 按 cardId 索引的 action items; 只有 `type == .longRec` 的卡片会有
+    var actionItemsByCard: [String: [ActionItem]]
 
     // MARK: - Init
 
     init(cards: [Card] = HomeStore.mockCards,
-         summary: DailySummary = HomeStore.mockSummary) {
+         summary: DailySummary = HomeStore.mockSummary,
+         actionItemsByCard: [String: [ActionItem]] = HomeStore.mockActionItems) {
         self.cards = cards
         self.summary = summary
         self.filteredCards = cards
+        self.actionItemsByCard = actionItemsByCard
+    }
+
+    // MARK: - Action item helpers
+
+    func actionItems(for cardId: String) -> [ActionItem] {
+        actionItemsByCard[cardId] ?? []
+    }
+
+    func actionItem(cardId: String, itemId: String) -> ActionItem? {
+        actionItemsByCard[cardId]?.first { $0.id == itemId }
     }
 
     // MARK: - Derived state
@@ -56,6 +70,88 @@ extension HomeStore {
         timeSavedMinutes: 47,
         interactionBreakdown: .init(walking: 3, postMeeting: 3, atDesk: 2)
     )
+
+    static let mockActionItems: [String: [ActionItem]] = [
+        "rec-1": [
+            ActionItem(
+                id: "ai-1",
+                cardId: "rec-1",
+                text: "Marshall 锁定 ODM 合作方",
+                owner: "Marshall",
+                deadline: "4 月底",
+                sourceQuote: "Marshall 你周五前要把 ODM 供应商的事情定下来, 不然影响后面的节奏. 我们不能再拖了, 下轮融资前必须要有一个明确的交付节奏.",
+                sourceCard: "和敦敏的 Series A 跟进会",
+                sourceTime: "14:32",
+                agentSuggestions: [
+                    "帮我起草一封 follow-up 邮件给 Marshall, 语气温和但要给明确节奏",
+                    "查一下我们目前评估过的 ODM 候选有哪些, 各自的优劣",
+                    "关联一下上次的硬件 roadmap 讨论, 看看 ODM 选型会影响到哪些节点"
+                ]
+            ),
+            ActionItem(
+                id: "ai-2",
+                cardId: "rec-1",
+                text: "把双麦 SNR 数据整理成 marketing 故事",
+                owner: "石慧",
+                deadline: "本周",
+                sourceQuote: "石慧你帮我把双麦 15dB 的数据提炼一下, 不要用技术语言 —— 改成 freestyle recording 的场景故事, 走路、开车、户外都能清晰录音.",
+                sourceCard: "和敦敏的 Series A 跟进会",
+                sourceTime: "27:18",
+                agentSuggestions: [
+                    "帮我拉一下最近三次户外录音测试的 SNR 数据, 整理成表格",
+                    "写一版 \"freestyle recording\" 的场景故事草稿, 三段就好",
+                    "查一下竞品 Sandbar、Humane 他们是怎么讲录音清晰度的"
+                ]
+            ),
+            ActionItem(
+                id: "ai-3",
+                cardId: "rec-1",
+                text: "研究 EO 14117 美国数据法规",
+                owner: "明明",
+                deadline: "下周前",
+                sourceQuote: "明明你抽空看一下 EO 14117, 这是美国对涉及敏感个人数据的外国控制技术的限制, 可能影响 Monostone 进入美国市场的策略. 下周前给我一份简短的分析.",
+                sourceCard: "和敦敏的 Series A 跟进会",
+                sourceTime: "38:45",
+                agentSuggestions: [
+                    "帮我查 EO 14117 最近 3 个月的执行动态",
+                    "找一下做 AI 硬件的中国公司是怎么应对这个法规的",
+                    "生成一份 1 页纸分析给 Linear 的合规团队"
+                ]
+            )
+        ],
+        "rec-2": [
+            ActionItem(
+                id: "ai-4",
+                cardId: "rec-2",
+                text: "上线 A/B 动态切换逻辑",
+                owner: "林啸",
+                deadline: "周五前",
+                sourceQuote: "那我本周把动态切换逻辑 ship 出去. 短会话走 baseline, 长会话走 A 组, 这样 latency 和准确率都不损失.",
+                sourceCard: "林啸 Memory A/B 对比测试评审",
+                sourceTime: "18:22",
+                agentSuggestions: [
+                    "帮我看一下当前动态切换的代码 diff 和测试覆盖",
+                    "起草一份上线公告给团队, 说清楚为什么要动态切换",
+                    "设定一个周四的提醒, 跟进林啸的上线进度"
+                ]
+            ),
+            ActionItem(
+                id: "ai-5",
+                cardId: "rec-2",
+                text: "集成 confidence decay 机制",
+                owner: "王浩",
+                deadline: "下周",
+                sourceQuote: "王浩你把 confidence decay 的 v1 做出来, 先用指数衰减, 参数粗调. 记得预留受保护 memory 的锁定机制.",
+                sourceCard: "林啸 Memory A/B 对比测试评审",
+                sourceTime: "21:10",
+                agentSuggestions: [
+                    "帮我找关于 SM-2 算法和 Ebbinghaus 遗忘曲线的权威资料",
+                    "列一个 v1 confidence decay 的 task breakdown, 按优先级",
+                    "关联到之前明明走路时的那条灵感录音"
+                ]
+            )
+        ]
+    ]
 
     static let mockCards: [Card] = [
         Card(

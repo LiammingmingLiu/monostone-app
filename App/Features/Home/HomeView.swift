@@ -33,6 +33,9 @@ struct HomeView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .toolbarVisibility(.hidden, for: .navigationBar)
+            .navigationDestination(for: Card.self) { card in
+                RecordingDetailView(card: card, store: store)
+            }
         }
     }
 
@@ -69,11 +72,22 @@ struct HomeView: View {
                 emptyState
             } else {
                 ForEach(store.filteredCards) { card in
-                    CardRow(card: card)
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .offset(y: 8)),
-                            removal: .opacity
-                        ))
+                    // 长录音卡片可点击进入详情页; 其他类型暂时不可点
+                    // (step 7 会把 Action Items 直接展示在 home feed 里)
+                    Group {
+                        if card.type == .longRec {
+                            NavigationLink(value: card) {
+                                CardRow(card: card)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            CardRow(card: card)
+                        }
+                    }
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: 8)),
+                        removal: .opacity
+                    ))
                 }
             }
         }
