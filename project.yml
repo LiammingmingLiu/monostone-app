@@ -36,9 +36,19 @@ targets:
       - path: App
         excludes:
           - "Resources/MockData/**"
+      # 把 MockData 下的 JSON 放到 Resources build phase.
+      # ---------------------------------------------------------------
+      # 原来只在顶层 `resources:` 里加 `App/Resources/MockData` (一个目录)
+      # XcodeGen 会把它生成为一个 group reference, 但 group 里的 .json 文件
+      # **不会被加进 Resources build phase** —— 结果构建出来的 .app 里完全
+      # 没有 JSON, Bundle.main.url(forResource:) 永远返回 nil, FullSummary /
+      # Home 全部走 seed, 用户看到的就是 "加载中..." 占位.
+      # 改成用 `sources` + `buildPhase: resources`, 让 MockData/ 里的每个
+      # 文件都被显式 copy 进 bundle.
+      - path: App/Resources/MockData
+        buildPhase: resources
     resources:
       - path: App/Assets.xcassets
-      - path: App/Resources/MockData
     info:
       path: App/Info.plist
       properties:

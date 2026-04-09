@@ -14,6 +14,9 @@ struct IdeaDetailView: View {
     let card: Card
     @State private var reclass: Card.CardType
 
+    /// inline chat 输入框文本 — prototype `.chat-input .field`
+    @State private var chatDraft: String = ""
+
     init(card: Card) {
         self.card = card
         self._reclass = State(initialValue: card.type)
@@ -281,13 +284,19 @@ struct IdeaDetailView: View {
 
     // MARK: - Chat
 
+    /// 对应 prototype `.card-chat`: 气泡列表 + 紧贴下方的 pill 输入框.
+    /// 和 CommandDetailView 的 chatSection 一样, 输入框 inline 嵌在同一张
+    /// panel 里, 用户能明确感知到这是"继续和 Agent 发散"的入口.
     private var chatSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("和 Agent 一起发散")
-            VStack(alignment: .leading, spacing: 8) {
-                chatBubble(role: .agent, text: "这个想法我记下来了。想让我帮你展开、还是和已有的想法做关联？")
-                chatBubble(role: .user, text: "和 spaced repetition 的遗忘曲线怎么结合")
-                chatBubble(role: .agent, text: "可以借 SM-2 的思路: memory 每次被引用就 refresh confidence, 没被引用按 Ebbinghaus 曲线衰减. 这样 memory 的\"重要性\"随使用自然分层.")
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    chatBubble(role: .agent, text: "这个想法我记下来了。想让我帮你展开、还是和已有的想法做关联？")
+                    chatBubble(role: .user, text: "和 spaced repetition 的遗忘曲线怎么结合")
+                    chatBubble(role: .agent, text: "可以借 SM-2 的思路: memory 每次被引用就 refresh confidence, 没被引用按 Ebbinghaus 曲线衰减. 这样 memory 的\"重要性\"随使用自然分层.")
+                }
+                inlineChatInput(placeholder: "继续展开…")
             }
             .padding(14)
             .background(Theme.panel)
@@ -296,6 +305,44 @@ struct IdeaDetailView: View {
                     .stroke(Theme.border, lineWidth: 0.5)
             }
             .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    /// 嵌入 chat card 底部的 pill 输入框. 和 CommandDetailView 的实现一致:
+    /// 文本框 + 圆形发送按钮, 文本空时按钮变灰 disabled.
+    private func inlineChatInput(placeholder: String) -> some View {
+        HStack(spacing: 10) {
+            TextField(placeholder, text: $chatDraft, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.text)
+                .tint(Theme.accent)
+                .lineLimit(1...4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Theme.background)
+                .overlay {
+                    Capsule().stroke(Theme.border, lineWidth: 0.5)
+                }
+                .clipShape(.capsule)
+
+            Button {
+                chatDraft = ""
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.black)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        chatDraft.trimmingCharacters(in: .whitespaces).isEmpty
+                            ? Theme.textDim
+                            : Theme.text
+                    )
+                    .clipShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .disabled(chatDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+            .animation(.easeOut(duration: 0.15), value: chatDraft.isEmpty)
         }
     }
 
@@ -323,18 +370,16 @@ struct IdeaDetailView: View {
 
     // MARK: - Bottom actions
 
+    /// 对应 prototype `.detail-actions`: flex flat 按钮. 用和 Command 详情页
+    /// 同款 `DetailActionButton` 保持一致.
     private var bottomActions: some View {
         HStack(spacing: 10) {
-            Button("归档") {}
-                .buttonStyle(.bordered)
-                .tint(Theme.textDim)
-            Button("加入项目") {}
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.typeIdea)
-            Spacer()
+            DetailActionButton(title: "归档", kind: .secondary) { }
+            DetailActionButton(title: "加入项目", kind: .primary) { }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 22)
+        .padding(.top, 14)
+        .padding(.bottom, 20)
         .background(.ultraThinMaterial)
     }
 }

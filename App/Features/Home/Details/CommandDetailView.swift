@@ -19,6 +19,14 @@ struct CommandDetailView: View {
     /// demo 用: 本地 state reflect 当前 reclass 选择, 真实实现写回 card type
     @State private var reclass: Card.CardType
 
+    /// 邮件正文: 用 @State 让 TextEditor 可编辑. Agent 生成完以后,
+    /// 用户可以直接在页面里改语气 / 细节 / 措辞, 不用跳出去再粘贴.
+    @State private var emailBody: String = CommandDetailView.defaultEmailBody
+
+    /// "继续和 Agent 沟通" 的输入框内容. prototype 里也是 inline 的 input,
+    /// 贴在 chat 气泡下面, 跟 bubbles 属于同一张卡片.
+    @State private var chatDraft: String = ""
+
     init(card: Card) {
         self.card = card
         self._reclass = State(initialValue: card.type)
@@ -302,23 +310,17 @@ struct CommandDetailView: View {
             emailField("收件人", "cai@linearcap.com")
             emailField("主题", "Re: Series A 讨论跟进")
             Divider().background(Theme.border)
-            Text("""
-            敦敏，
-
-            谢谢今早的深度交流。针对估值和 GTM，我这边补充几点：
-
-            **估值** — 我们的逻辑基于 Context 复利带来的切换成本。Day 30 的用户迁移成本是 Day 1 的 10 倍以上，这是数据独立性之外的第二条护城河。
-
-            **GTM** — 我们认同企业场景优先级更高。我们的核心用户是每天和 AI 交互 10+ 次的高频用户，团队协作场景的 Context 共享需求远大于家庭场景。下周拉出初版 B2B roadmap 给你看。
-
-            另外 EO 14117 的角度我这边会查一下，有结论同步。
-
-            再聊，
-            明明
-            """)
-            .font(.system(size: 12))
-            .foregroundStyle(Theme.text)
-            .lineSpacing(4)
+            // 可编辑的邮件正文. 用 TextField(axis: .vertical) 而不是 TextEditor,
+            // 因为 TextEditor 自带灰色背景 + 固定高度, 嵌在一个已有 panel 里
+            // 视觉很重, 而 vertical TextField 会随内容高度自适应, 和原型 HTML
+            // 里直接渲染的 <p> 段落视觉更接近.
+            TextField("邮件正文", text: $emailBody, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text)
+                .lineSpacing(4)
+                .tint(Theme.accent)
+                .scrollDismissesKeyboard(.interactively)
         }
         .padding(14)
         .background(Theme.panel)
@@ -328,6 +330,23 @@ struct CommandDetailView: View {
         }
         .clipShape(.rect(cornerRadius: 12))
     }
+
+    /// Agent 首次生成的草稿. 用户可以在 TextField 里直接改, 改动不会丢失
+    /// (只要这个 view 不 destroy). 真实实现应该绑到 AgentDraftStore.
+    private static let defaultEmailBody: String = """
+    敦敏，
+
+    谢谢今早的深度交流。针对估值和 GTM，我这边补充几点：
+
+    估值 — 我们的逻辑基于 Context 复利带来的切换成本。Day 30 的用户迁移成本是 Day 1 的 10 倍以上，这是数据独立性之外的第二条护城河。
+
+    GTM — 我们认同企业场景优先级更高。我们的核心用户是每天和 AI 交互 10+ 次的高频用户，团队协作场景的 Context 共享需求远大于家庭场景。下周拉出初版 B2B roadmap 给你看。
+
+    另外 EO 14117 的角度我这边会查一下，有结论同步。
+
+    再聊，
+    明明
+    """
 
     private func emailField(_ key: String, _ value: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
@@ -345,13 +364,20 @@ struct CommandDetailView: View {
 
     // MARK: - Chat preview
 
+    /// 对应 prototype `.card-chat`: 气泡列表 + 紧贴下方的 pill 输入框.
+    /// 原本 native 版本只放了气泡, 看上去像一段话结束了, 用户感觉不到这是
+    /// 个"继续对话"的入口. 现在把输入框 inline 塞进同一张 panel 里,
+    /// 视觉上气泡 → 分隔线 → 输入框 pill → 发送按钮 形成一个完整 chat card.
     private var chatSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("继续和 Agent 沟通")
-            VStack(alignment: .leading, spacing: 8) {
-                chatBubble(role: .agent, text: "草稿写好了。想改哪里都可以告诉我 —— 语气、长度、结构都行。")
-                chatBubble(role: .user,  text: "GTM 那段太简略了, 展开一下, 重点说我们为什么选企业优先")
-                chatBubble(role: .agent, text: "好, 我把 GTM 段扩展成三句, 锚点用\"10+ 交互/天的高频用户\". 新版已经更新到上面.")
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    chatBubble(role: .agent, text: "草稿写好了。想改哪里都可以告诉我 —— 语气、长度、结构都行。")
+                    chatBubble(role: .user,  text: "GTM 那段太简略了, 展开一下, 重点说我们为什么选企业优先")
+                    chatBubble(role: .agent, text: "好, 我把 GTM 段扩展成三句, 锚点用\"10+ 交互/天的高频用户\". 新版已经更新到上面.")
+                }
+                inlineChatInput(placeholder: "继续改点什么？")
             }
             .padding(14)
             .background(Theme.panel)
@@ -360,6 +386,47 @@ struct CommandDetailView: View {
                     .stroke(Theme.border, lineWidth: 0.5)
             }
             .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    /// Prototype `.chat-input`: pill 输入框 + 圆形发送按钮.
+    /// 这里做成本地 view helper, 和 bottom Agent chat tab 的那个全屏 input
+    /// 不一样 —— 那个是 `ChatInputBar`, 会占满 safeArea, 而这个是嵌在 card 里
+    /// 的 mini input, 不抢页面底部的 "存为草稿 / 发送" 按钮.
+    private func inlineChatInput(placeholder: String) -> some View {
+        HStack(spacing: 10) {
+            TextField(placeholder, text: $chatDraft, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.text)
+                .tint(Theme.accent)
+                .lineLimit(1...4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Theme.background)
+                .overlay {
+                    Capsule().stroke(Theme.border, lineWidth: 0.5)
+                }
+                .clipShape(.capsule)
+
+            Button {
+                // demo: 暂时不接真实 agent, 只清空输入
+                chatDraft = ""
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.black)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        chatDraft.trimmingCharacters(in: .whitespaces).isEmpty
+                            ? Theme.textDim
+                            : Theme.text
+                    )
+                    .clipShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .disabled(chatDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+            .animation(.easeOut(duration: 0.15), value: chatDraft.isEmpty)
         }
     }
 
@@ -387,29 +454,83 @@ struct CommandDetailView: View {
 
     // MARK: - Bottom actions
 
+    /// 对应 prototype `.detail-actions`: 一条 blur 底栏, 里面放 flex:1 的按钮.
+    /// 原来的 `.bordered` / `.borderedProminent` 是 SwiftUI 默认风格, 和
+    /// prototype 的 flat 矩形按钮差别很大, 也让 "存为草稿 / 发送" 看上去像是
+    /// 两个尺寸不一致的 pill. 现在改成全宽 flex 按钮 + 圆角 12, 和原型对齐.
     @ViewBuilder
     private var bottomActions: some View {
         HStack(spacing: 10) {
             if isProcessing {
-                Button("在后台继续") {}
-                    .buttonStyle(.bordered)
-                    .tint(Theme.textDim)
-                Button("取消任务") {}
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                DetailActionButton(title: "在后台继续", kind: .secondary) { }
+                DetailActionButton(title: "取消任务", kind: .destructive) { }
             } else {
-                Button("存为草稿") {}
-                    .buttonStyle(.bordered)
-                    .tint(Theme.textDim)
-                Button("发送") {}
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.typeCommand)
+                DetailActionButton(title: "存为草稿", kind: .secondary) { }
+                DetailActionButton(title: "发送", kind: .primary) { }
             }
-            Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 22)
+        .padding(.top, 14)
+        .padding(.bottom, 20)
         .background(.ultraThinMaterial)
+    }
+}
+
+// MARK: - Shared detail action button
+
+/// Prototype `.detail-actions button` 的 native 版本.
+///
+/// - `.primary` 用白底黑字 (prototype `button.primary`)
+/// - `.secondary` 用透明底 + 0.5 border (prototype `button`)
+/// - `.destructive` 用浅红色文字 + 红色 border
+///
+/// 所有按钮 `maxWidth: .infinity` 模拟 `flex: 1`, 让底栏里多个按钮自动平分宽度.
+struct DetailActionButton: View {
+    enum Kind { case primary, secondary, destructive }
+
+    let title: String
+    let kind: Kind
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: kind == .primary ? .semibold : .medium))
+                .foregroundStyle(foreground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(background)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(borderColor, lineWidth: 0.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var foreground: Color {
+        switch kind {
+        case .primary:     Color.black
+        case .secondary:   Theme.text
+        case .destructive: Color.red.opacity(0.95)
+        }
+    }
+
+    private var background: Color {
+        switch kind {
+        case .primary:     Theme.text
+        case .secondary:   Color.clear
+        case .destructive: Color.clear
+        }
+    }
+
+    private var borderColor: Color {
+        switch kind {
+        case .primary:     Theme.text
+        case .secondary:   Theme.borderStrong
+        case .destructive: Color.red.opacity(0.5)
+        }
     }
 }
 

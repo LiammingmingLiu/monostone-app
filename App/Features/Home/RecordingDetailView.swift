@@ -395,21 +395,25 @@ struct RecordingDetailView: View {
                 SectionHeader("Action Items")
                 VStack(spacing: 0) {
                     ForEach(items) { item in
+                        // 注意: SwipeActionItemRow 内部已经 own tap + drag,
+                        // parent 不需要再包 Button — 原来的 Button 会在左滑松手时
+                        // 误触发 tap, 导致"左滑删掉反而弹出 action item modal".
                         SwipeActionItemRow(
+                            onTap: {
+                                presentedSheet = .actionItem(item)
+                            },
                             onDelete: {
                                 // 用 spring 动画让 section 自己走 .transition
                                 // (section 级联塌陷 = 父视图的 !items.isEmpty 切换)
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                                     store.deleteActionItem(cardId: card.id, itemId: item.id)
                                 }
+                                // 对应 prototype `rejectActionItemBySwipe` 的 toast,
+                                // 强调"agent 学到了", 而不是纯粹删除.
+                                showToast("已删除 · Agent 会学习这个判断")
                             }
                         ) {
-                            Button {
-                                presentedSheet = .actionItem(item)
-                            } label: {
-                                actionItemRow(item)
-                            }
-                            .buttonStyle(.plain)
+                            actionItemRow(item)
                         }
 
                         if item.id != items.last?.id {
@@ -434,10 +438,17 @@ struct RecordingDetailView: View {
     private func actionItemRow(_ item: ActionItem) -> some View {
         let isDone = item.status == .done
         return HStack(alignment: .center, spacing: 12) {
-            // Checkbox · 点击 toggle done 状态 (不触发 row 的 tap 去开 modal)
+            // Checkbox · 点击 toggle done 状态 (不触发 row 的 tap 去开 modal).
+            // 对应 prototype `toggleActionItem` 的 toast: 接受 / 撤销.
             Button {
+                let willBeDone = !isDone
                 withAnimation(.easeOut(duration: 0.2)) {
                     store.toggleActionItemDone(cardId: card.id, itemId: item.id)
+                }
+                if willBeDone {
+                    showToast("已接受 · 已加到提醒事项并同步到 Linear")
+                } else {
+                    showToast("已撤销")
                 }
             } label: {
                 ZStack {
