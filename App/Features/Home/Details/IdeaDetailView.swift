@@ -41,7 +41,6 @@ struct IdeaDetailView: View {
         .background(Theme.background)
         .navigationTitle("灵感")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) { bottomActions }
     }
 
     // MARK: - Head
@@ -368,22 +367,6 @@ struct IdeaDetailView: View {
         }
     }
 
-    // MARK: - Bottom actions
-
-    /// 对应 prototype `.detail-actions`: flex flat 按钮. 用和 Command 详情页
-    /// 同款 `DetailActionButton`.
-    /// 底色用 `Theme.background` 而不是 `.ultraThinMaterial`, 避免和 iOS 26
-    /// 的 tab bar 毛玻璃叠在一起"融为一体".
-    private var bottomActions: some View {
-        HStack(spacing: 10) {
-            DetailActionButton(title: "归档", kind: .secondary) { }
-            DetailActionButton(title: "加入项目", kind: .primary) { }
-        }
-        .padding(.horizontal, 22)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
-        .background(Theme.background)
-    }
 }
 
 #Preview {
