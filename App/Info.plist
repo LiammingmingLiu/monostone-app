@@ -39,6 +39,8 @@
 	<string>Monostone 需要麦克风来录制会议和捕捉灵感</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>Monostone 会把 Action Items 写入提醒事项</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

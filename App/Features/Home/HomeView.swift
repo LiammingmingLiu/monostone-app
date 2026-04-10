@@ -23,7 +23,7 @@ struct HomeView: View {
     /// 显式导航路径, 让 deep link 和通知能 programmatic push.
     @State private var navigationPath = NavigationPath()
     @Environment(RingCoordinator.self) private var ringCoordinator
-    @Environment(NotificationManager.self) private var notificationManager
+    // NotificationManager 已移除 — Live Activities 完全替代了锁屏通知
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -174,17 +174,7 @@ struct HomeView: View {
             processingDetail: processingDetail
         )
 
-        // ② 调度普通通知作为 fallback (Live Activity 不可用时)
-        if liveActivity == nil {
-            notificationManager.scheduleCardCompleted(
-                cardId: card.id,
-                title: "\(type.label) · 处理完成",
-                body: completedTitle,
-                delay: delay
-            )
-        }
-
-        // ③ 延迟后: card → done + 更新 Live Activity + 刷新 widget
+        // ② 延迟后: card → done + 更新 Live Activity + 刷新 widget
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(delay))
             guard !Task.isCancelled else { return }
@@ -383,6 +373,6 @@ struct HomeView: View {
 
 #Preview {
     HomeView(deepLinkCardId: .constant(nil))
-        .environment(NotificationManager())
+        // NotificationManager 已移除
         .preferredColorScheme(.dark)
 }

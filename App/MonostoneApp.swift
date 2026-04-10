@@ -10,9 +10,9 @@ struct MonostoneApp: App {
     /// )
     /// ```
     @State private var ringCoordinator = RingCoordinator()
-    @State private var notificationManager = NotificationManager()
 
-    /// Deep link 目标卡片 ID. 通知 / Widget 点击写入, RootView → HomeView 读取后导航.
+    /// Deep link 目标卡片 ID. Live Activity / Widget 点击写入,
+    /// RootView → HomeView 读取后导航.
     @State private var deepLinkCardId: String?
 
     var body: some Scene {
@@ -20,21 +20,11 @@ struct MonostoneApp: App {
             RootView(deepLinkCardId: $deepLinkCardId)
                 .preferredColorScheme(.dark)
                 .environment(ringCoordinator)
-                .environment(notificationManager)
                 .task {
                     await ringCoordinator.connect()
-                    await notificationManager.requestPermission()
                 }
                 .onOpenURL { url in
-                    // 处理 monostone://card/{cardId} 和 monostone://home
                     handleDeepLink(url)
-                }
-                // 通知点击 → NotificationManager.pendingDeepLinkCardId → deepLinkCardId
-                .onChange(of: notificationManager.pendingDeepLinkCardId) { _, newCardId in
-                    if let newCardId {
-                        deepLinkCardId = newCardId
-                        notificationManager.pendingDeepLinkCardId = nil
-                    }
                 }
         }
     }
@@ -48,13 +38,12 @@ struct MonostoneApp: App {
         guard url.scheme == "monostone" else { return }
         switch url.host {
         case "card":
-            // path = "/{cardId}", pathComponents = ["/", "cardId"]
             let components = url.pathComponents
             if components.count >= 2 {
                 deepLinkCardId = components[1]
             }
         case "home":
-            deepLinkCardId = nil  // 只切 tab, 不推详情 (RootView 会处理)
+            deepLinkCardId = nil
         default:
             break
         }
