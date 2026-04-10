@@ -2,6 +2,11 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+// `Activity` 没有标记 Sendable, 但它内部是线程安全的 (Apple 的 ActivityKit
+// 在所有平台上都从任意线程调用 update/end). Swift 6 strict concurrency 要求
+// 我们显式声明, 否则跨 Task 传递就会报 "sending risks data races".
+extension Activity: @retroactive @unchecked Sendable {}
+
 /// 首页 Feed（对应 prototype s2）
 ///
 /// 构成：
@@ -22,8 +27,11 @@ struct HomeView: View {
     @State private var shortCaptureToastMessage: String?
     /// 显式导航路径, 让 deep link 和通知能 programmatic push.
     @State private var navigationPath = NavigationPath()
+    /// 全局唯一的 Live Activity 实例. 多个任务都堆在这一个里面.
+    @State private var liveActivity: Activity<CardProcessingAttributes>?
+    /// Live Activity 当前的 task 列表 (和 ContentState.tasks 同步)
+    @State private var liveActivityTasks: [TaskItem] = []
     @Environment(RingCoordinator.self) private var ringCoordinator
-    // NotificationManager 已移除 — Live Activities 完全替代了锁屏通知
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -155,8 +163,8 @@ struct HomeView: View {
 
     // MARK: - Processing simulation
 
-    /// 模拟 Agent 异步处理: 延迟后把最新的 processing 卡片转成 done,
-    /// 更新 Live Activity + 发通知 + 刷新 Widget.
+    /// 模拟 Agent 异步处理: 延迟后把 processing 卡片转成 done,
+    /// 更新 Live Activity (单个共享实例) + 刷新 Widget.
     private func scheduleProcessingSimulation(type: Card.CardType) {
         store.writeToAppGroup()
 
@@ -164,15 +172,18 @@ struct HomeView: View {
 
         let delay = Double.random(in: 4...6)
         let completedTitle = HomeStore.completedTitle(for: type)
-        let completedMeta = HomeStore.completedMetaLine(for: type)
+        let completedSummary = HomeStore.completedSummary(for: type)
         let processingDetail = card.processingMeta ?? "处理中…"
 
-        // ① 启动 Live Activity (锁屏实时状态卡片)
-        let liveActivity = startLiveActivity(
-            card: card,
-            type: type,
-            processingDetail: processingDetail
+        // ① 往 Live Activity 里插入新的 processing 任务 (新的在最上面)
+        let newTask = TaskItem(
+            id: card.id,
+            typeRaw: type.rawValue,
+            status: "processing",
+            title: "正在处理…",
+            detail: processingDetail
         )
+        addTaskToLiveActivity(newTask)
 
         // ② 延迟后: card → done + 更新 Live Activity + 刷新 widget
         Task { @MainActor in
@@ -184,57 +195,90 @@ struct HomeView: View {
             }
             store.writeToAppGroup()
 
-            // 更新 Live Activity 到完成态
-            if let activity = liveActivity {
-                let doneState = CardProcessingAttributes.ContentState(
-                    status: "done",
-                    title: completedTitle,
-                    detail: completedMeta
-                )
-                await activity.update(
-                    ActivityContent(state: doneState, staleDate: nil)
-                )
+            // 更新这条 task 的状态为 done (带详细摘要)
+            updateTaskInLiveActivity(
+                cardId: card.id,
+                status: "done",
+                title: completedTitle,
+                detail: completedSummary
+            )
 
-                // 10 秒后结束 Live Activity
-                try? await Task.sleep(for: .seconds(10))
-                await activity.end(nil, dismissalPolicy: .default)
+            // 检查是否所有 task 都完成了 — 是的话 15 秒后结束 Activity
+            if liveActivityTasks.allSatisfy(\.isDone) {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                // 再次确认 (期间可能有新任务加入)
+                if liveActivityTasks.allSatisfy(\.isDone) {
+                    await endLiveActivity()
+                }
             }
         }
     }
 
-    // MARK: - Live Activity
+    // MARK: - Live Activity management (single shared instance)
 
-    /// 启动一个 Live Activity, 在锁屏上显示处理状态.
-    /// 如果 ActivityKit 不可用 (模拟器限制 / 用户关闭) 返回 nil,
-    /// 调用方降级为普通通知.
-    private func startLiveActivity(
-        card: Card,
-        type: Card.CardType,
-        processingDetail: String
-    ) -> Activity<CardProcessingAttributes>? {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return nil }
+    /// 往 Live Activity 的 task list 前面插入一条新任务.
+    /// 如果还没有 Activity, 创建一个; 如果已有, update 它.
+    private func addTaskToLiveActivity(_ task: TaskItem) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
-        let attributes = CardProcessingAttributes(
-            cardId: card.id,
-            cardTypeRaw: type.rawValue
-        )
-        let initialState = CardProcessingAttributes.ContentState(
-            status: "processing",
-            title: "正在处理…",
-            detail: processingDetail
-        )
-        let content = ActivityContent(state: initialState, staleDate: nil)
-
-        do {
-            return try Activity.request(
-                attributes: attributes,
-                content: content,
-                pushType: nil // 不用 push token, 纯本地更新
-            )
-        } catch {
-            print("[LiveActivity] request failed: \(error)")
-            return nil
+        // 插入到最前面, 最多保留 4 条
+        liveActivityTasks.insert(task, at: 0)
+        if liveActivityTasks.count > 4 {
+            liveActivityTasks = Array(liveActivityTasks.prefix(4))
         }
+
+        let state = CardProcessingAttributes.ContentState(tasks: liveActivityTasks)
+        let content = ActivityContent(state: state, staleDate: nil)
+
+        if let activity = liveActivity {
+            // 已有 Activity — 直接 update
+            Task {
+                await activity.update(content)
+            }
+        } else {
+            // 第一次 — 创建新的 Activity
+            do {
+                liveActivity = try Activity.request(
+                    attributes: CardProcessingAttributes(),
+                    content: content,
+                    pushType: nil
+                )
+            } catch {
+                print("[LiveActivity] request failed: \(error)")
+            }
+        }
+    }
+
+    /// 更新某条 task 的状态 (processing → done).
+    private func updateTaskInLiveActivity(
+        cardId: String,
+        status: String,
+        title: String,
+        detail: String
+    ) {
+        guard let idx = liveActivityTasks.firstIndex(where: { $0.id == cardId }) else { return }
+        liveActivityTasks[idx] = TaskItem(
+            id: cardId,
+            typeRaw: liveActivityTasks[idx].typeRaw,
+            status: status,
+            title: title,
+            detail: detail
+        )
+
+        let state = CardProcessingAttributes.ContentState(tasks: liveActivityTasks)
+        let content = ActivityContent(state: state, staleDate: nil)
+
+        let activity = liveActivity
+        Task { await activity?.update(content) }
+    }
+
+    /// 结束 Live Activity, 清理本地状态.
+    private func endLiveActivity() async {
+        let activity = liveActivity
+        await activity?.end(nil, dismissalPolicy: .default)
+        liveActivity = nil
+        liveActivityTasks = []
     }
 
     private func showToastBriefly(_ message: String) {

@@ -2,124 +2,179 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-/// Live Activity 的 UI 配置 — 锁屏上的实时处理状态卡片.
+/// Live Activity 的 UI — 锁屏上的**任务队列**卡片.
 ///
-/// 渲染两个场景:
-/// 1. **锁屏 banner** — 最重要的展示位, 用户解锁前就能看到
-/// 2. **Dynamic Island** — compact (pill) + expanded (大卡片)
+/// 全局只有一个 Live Activity, 里面渲染一个 task list.
+/// 新任务在最上面, 每条任务有 processing / done 两种状态.
 ///
-/// 状态转换:
-/// - `processing`: 类型标签 + 动态进度条 + 处理步骤文案
-/// - `done`: 类型标签 + ✓ 完成 + 最终标题 + meta line
+/// 锁屏 banner 最多显示 3 条任务 (空间有限).
+/// Dynamic Island expanded 显示最新 1 条 + 队列数.
 struct CardProcessingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: CardProcessingAttributes.self) { context in
             // ===== 锁屏 banner =====
-            lockScreenView(context: context)
-                .activityBackgroundTint(Color.black.opacity(0.7))
-                .widgetURL(URL(string: "monostone://card/\(context.attributes.cardId)"))
+            lockScreenView(tasks: context.state.tasks)
+                .activityBackgroundTint(Color.black.opacity(0.75))
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded regions
                 DynamicIslandExpandedRegion(.leading) {
-                    typeBadge(context.attributes.typeLabel)
+                    Text("Monostone")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    statusBadge(context.state)
+                    dynamicIslandTrailing(context.state.tasks)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(context.state.title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .lineLimit(1)
-                        Text(context.state.detail)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    dynamicIslandBottom(context.state.tasks)
                 }
             } compactLeading: {
-                // Dynamic Island compact 左边: 类型色圆点
                 Circle()
-                    .fill(typeColor(context.attributes.cardTypeRaw))
+                    .fill(typeColor(context.state.tasks.first?.typeRaw ?? ""))
                     .frame(width: 10, height: 10)
             } compactTrailing: {
-                // Dynamic Island compact 右边: 状态文字
-                Text(context.state.isProcessing ? "处理中" : "完成")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(context.state.isProcessing ? .secondary : .primary)
+                dynamicIslandCompactTrailing(context.state.tasks)
             } minimal: {
-                // Dynamic Island minimal (多个 activity 时)
-                Circle()
-                    .fill(typeColor(context.attributes.cardTypeRaw))
-                    .frame(width: 10, height: 10)
+                dynamicIslandCompactTrailing(context.state.tasks)
             }
-            .widgetURL(URL(string: "monostone://card/\(context.attributes.cardId)"))
         }
     }
 
-    // MARK: - Lock screen banner
+    // MARK: - Lock screen banner (task list)
 
-    private func lockScreenView(
-        context: ActivityViewContext<CardProcessingAttributes>
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // 顶行: 类型标签 + 状态
-            HStack {
-                typeBadge(context.attributes.typeLabel)
-                Spacer()
-                statusBadge(context.state)
+    private func lockScreenView(tasks: [TaskItem]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 最多显示 3 条
+            let visibleTasks = Array(tasks.prefix(3))
+
+            ForEach(Array(visibleTasks.enumerated()), id: \.element.id) { idx, task in
+                // deep link: 点击某一行跳到对应卡片
+                Link(destination: URL(string: "monostone://card/\(task.id)")!) {
+                    taskRow(task)
+                }
+
+                if idx < visibleTasks.count - 1 {
+                    Divider()
+                        .background(Color.white.opacity(0.1))
+                        .padding(.leading, 20)
+                }
             }
 
-            // 处理中: 进度条动画
-            if context.state.isProcessing {
-                ProgressView()
-                    .progressViewStyle(.linear)
-                    .tint(typeColor(context.attributes.cardTypeRaw))
+            // 如果还有更多, 显示 "+N"
+            if tasks.count > 3 {
+                Text("还有 \(tasks.count - 3) 个任务")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
             }
-
-            // 标题
-            Text(context.state.title)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // 详情
-            Text(context.state.detail)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
         }
-        .padding(16)
+        .padding(.vertical, 10)
     }
 
-    // MARK: - Components
+    // MARK: - Single task row
 
-    private func typeBadge(_ label: String) -> some View {
-        Text(label)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .tracking(0.4)
+    private func taskRow(_ task: TaskItem) -> some View {
+        HStack(spacing: 10) {
+            // 类型色圆点
+            Circle()
+                .fill(typeColor(task.typeRaw))
+                .frame(width: 7, height: 7)
+
+            VStack(alignment: .leading, spacing: 2) {
+                // 类型标签 + 状态
+                HStack(spacing: 6) {
+                    Text(task.typeLabel)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    statusBadge(task)
+                }
+
+                // 标题
+                Text(task.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+
+                // 详情 — done 态显示更多行, 用户看锁屏就够了不用进 App
+                Text(task.detail)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(task.isDone ? 3 : 1)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
-    private func statusBadge(_ state: CardProcessingAttributes.ContentState) -> some View {
-        HStack(spacing: 4) {
-            if state.isDone {
+    // MARK: - Status badge
+
+    private func statusBadge(_ task: TaskItem) -> some View {
+        HStack(spacing: 3) {
+            if task.isDone {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                     .foregroundStyle(Color.green)
             }
-            Text(state.isProcessing ? "处理中…" : "完成")
+            Text(task.isProcessing ? "处理中…" : "完成")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(task.isProcessing ? Color.secondary : Color.green)
+        }
+    }
+
+    // MARK: - Dynamic Island helpers
+
+    @ViewBuilder
+    private func dynamicIslandTrailing(_ tasks: [TaskItem]) -> some View {
+        let processingCount = tasks.filter(\.isProcessing).count
+        if processingCount > 0 {
+            Text("\(processingCount) 处理中")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(state.isProcessing ? Color.secondary : Color.green)
+                .foregroundStyle(.secondary)
+        } else {
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.green)
+                Text("完成")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.green)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func dynamicIslandBottom(_ tasks: [TaskItem]) -> some View {
+        if let latest = tasks.first {
+            taskRow(latest)
+            if tasks.count > 1 {
+                Text("还有 \(tasks.count - 1) 个任务")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func dynamicIslandCompactTrailing(_ tasks: [TaskItem]) -> some View {
+        let processingCount = tasks.filter(\.isProcessing).count
+        if processingCount > 0 {
+            Text("\(processingCount)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+        } else {
+            Image(systemName: "checkmark")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.green)
         }
     }
 
     // MARK: - Colors
 
-    /// 类型色 — 从 Theme.swift 复制, Widget 进程无法 import Theme
     private func typeColor(_ typeRaw: String) -> Color {
         switch typeRaw {
         case "longRec": Color(red: 0.435, green: 0.765, blue: 0.816)

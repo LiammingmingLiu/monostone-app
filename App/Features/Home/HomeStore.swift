@@ -271,6 +271,37 @@ final class HomeStore {
         }
     }
 
+    /// Live Activity 完成态的详细摘要. 比 `completedMetaLine` 更长,
+    /// 目标是让用户看一眼锁屏就不用再点进去.
+    static func completedSummary(for type: Card.CardType) -> String {
+        switch type {
+        case .longRec:
+            [
+                "42:18 · 4 人 · 提取 3 项 Action Items · 2 条关键决策\n要点: 产品定位确认闭环路线, 企业场景优先级提升",
+                "28:04 · 3 人 · A/B 测试数据对比完成\n结论: 长会话走新策略, 短会话维持 baseline",
+                "35:12 · 2 人 · 硬件 roadmap 更新\n下一步: ODM 供应商本周锁定, Marshall 跟进"
+            ].randomElement()!
+        case .command:
+            [
+                "已调取 4 项上下文 · 邮件草稿已生成\n收件人: cai@linearcap.com · 主题: Re: Series A 讨论跟进",
+                "已调取 3 项上下文 · 竞品 research 完成\nSandbar: Series B $40M · 产品方向转 enterprise",
+                "已调取 2 项上下文 · 会议要点整理完成\n生成 5 条要点 + 3 个后续 action"
+            ].randomElement()!
+        case .idea:
+            [
+                "已关联 2 条过往灵感 · 归属: Monostone 后端 94%\n相似: \"L2 consolidation 加稳定窗口\" (87%)",
+                "已关联 1 条过往 · 归属: Monostone iOS 91%\n可结合: spaced repetition 遗忘曲线做 decay",
+                "新灵感已归档 · 归属: Growth 88%\nAgent 建议: 可以展开成 RFC 草稿"
+            ].randomElement()!
+        case .todo:
+            [
+                "已写入 Apple 日历 + 提醒事项\n4/11 15:00 · 已设提前 30 分钟提醒",
+                "已同步到 Linear · 分配给 Marshall\n截止: 本周五 · 优先级: 高",
+                "已写入提醒事项\n明天 10:00 · 已设提前 1 小时提醒"
+            ].randomElement()!
+        }
+    }
+
     // MARK: - App Group sync
 
     /// 把当前 cards + summary 序列化写到 App Group UserDefaults,
