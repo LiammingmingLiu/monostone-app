@@ -12,9 +12,9 @@ import Foundation
 struct Card: Identifiable, Hashable, Codable {
     let id: String
     let type: CardType
-    let title: String
+    var title: String
     let timeRelative: String
-    let status: CardStatus
+    var status: CardStatus
 
     /// 时间分组, "今天" / "昨天" / "本周" 等, view 层做 section grouping 用.
     /// 对应 prototype 首页的 `.time-sep`.
@@ -35,12 +35,12 @@ struct Card: Identifiable, Hashable, Codable {
     let project: String?
 
     /// 处理中的描述文案（status == .processing 时显示）
-    let processingMeta: String?
+    var processingMeta: String?
 
     /// 可选的自定义 meta 显示行 (例如指令卡"已完成 · 调取 4 项上下文",
     /// 灵感卡"走路时 · Monostone 后端 · 关联 3 条过往").
     /// 如果为 nil, view 层会用默认的 `metaLine` 派生逻辑.
-    let customMetaLine: String?
+    var customMetaLine: String?
 
     var tint: Tint { type.tint }
 

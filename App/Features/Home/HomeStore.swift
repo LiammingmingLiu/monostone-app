@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import WidgetKit
 
 /// 首页的 @Observable store
 ///
@@ -212,6 +213,89 @@ final class HomeStore {
                 customMetaLine: nil
             )
         }
+    }
+
+    // MARK: - Processing simulation
+
+    /// 把一张 `.processing` 卡片转成 `.done`, 换上"完成后"的 mock 标题和 meta.
+    /// HomeView 在延迟 Task 里调用, 模拟 Agent 异步处理完成.
+    func simulateProcessingComplete(cardId: String) {
+        guard let idx = cards.firstIndex(where: { $0.id == cardId }),
+              cards[idx].status == .processing
+        else { return }
+        cards[idx].status = .done
+        cards[idx].processingMeta = nil
+        cards[idx].title = Self.completedTitle(for: cards[idx].type)
+        cards[idx].customMetaLine = Self.completedMetaLine(for: cards[idx].type)
+        recomputeFiltered()
+    }
+
+    /// 把所有还在 processing 的卡片强制完成.
+    /// 在 App 回到前台时调用 (防止 Task 被系统 suspend 后卡片永远停在 processing).
+    func completeAllProcessingCards() {
+        let processingIds = cards
+            .filter { $0.status == .processing }
+            .map { $0.id }
+        guard !processingIds.isEmpty else { return }
+        for id in processingIds {
+            simulateProcessingComplete(cardId: id)
+        }
+        writeToAppGroup()
+    }
+
+    /// 完成后的 mock 标题. 每种类型有几个候选, 随机挑一个让 demo 不单调.
+    static func completedTitle(for type: Card.CardType) -> String {
+        switch type {
+        case .longRec:
+            ["与设计团队的产品评审", "和供应商的硬件对接会", "团队周会 · 技术方向讨论"]
+                .randomElement()!
+        case .command:
+            ["\"帮我写一封跟进邮件\"", "\"做一份竞品分析 research\"", "\"整理今天的会议要点\""]
+                .randomElement()!
+        case .idea:
+            ["Memory 可以加入 time-decay 机制", "onboarding 加 LinkedIn 导入试试", "Agent Skill 市场的变现思路"]
+                .randomElement()!
+        case .todo:
+            ["周五下午 3 点团建", "提醒发给投资人的 deck", "下周一前完成原型测试"]
+                .randomElement()!
+        }
+    }
+
+    /// 完成后的 mock meta 行.
+    private static func completedMetaLine(for type: Card.CardType) -> String {
+        switch type {
+        case .longRec: "刚刚 · 已结构化 · 3 项待办"
+        case .command: "已完成 · 调取 3 项上下文"
+        case .idea:    "刚刚捕捉 · 已关联 2 条过往"
+        case .todo:    "已写入 Apple 日历"
+        }
+    }
+
+    // MARK: - App Group sync
+
+    /// 把当前 cards + summary 序列化写到 App Group UserDefaults,
+    /// 然后通知 WidgetKit 刷新 timeline. Widget 的 TimelineProvider
+    /// 调 `SharedDataWriter.read()` 就能拿到最新数据.
+    func writeToAppGroup() {
+        let sharedCards = cards.prefix(10).map { card in
+            SharedCard(
+                id: card.id,
+                typeRaw: card.type.rawValue,
+                title: card.title,
+                statusRaw: card.status.rawValue,
+                timeRelative: card.timeRelative,
+                metaLine: card.metaLine
+            )
+        }
+        let data = SharedWidgetData(
+            cards: Array(sharedCards),
+            dayCount: summary.dayCount,
+            interactionsToday: summary.interactionsToday,
+            ringConnected: summary.ringConnected,
+            updatedAt: .now
+        )
+        SharedDataWriter.write(data)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - Derived state

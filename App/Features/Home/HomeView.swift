@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 /// 首页 Feed（对应 prototype s2）
 ///
@@ -11,14 +12,20 @@ import SwiftUI
 ///   - 快速点 → fullScreenCover 进 LongRecordingView
 ///   - 按住 300ms+ → 短捕捉, 松手时首页显示 toast
 struct HomeView: View {
+    /// Deep link 传入的卡片 ID. 收到后查找 card → push 到详情页 → 清零.
+    @Binding var deepLinkCardId: String?
+
     @State private var store = HomeStore()
     @State private var summaryStore = FullSummaryStore()
     @State private var recordingStore = RecordingStore()
     @State private var shortCaptureToastMessage: String?
+    /// 显式导航路径, 让 deep link 和通知能 programmatic push.
+    @State private var navigationPath = NavigationPath()
     @Environment(RingCoordinator.self) private var ringCoordinator
+    @Environment(NotificationManager.self) private var notificationManager
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
                     header
@@ -81,7 +88,33 @@ struct HomeView: View {
                 guard newValue != nil else { return }
                 handleLongRecordingFinished()
             }
+            // Deep link: 通知 / Widget 点击 → 跳转到指定卡片详情页
+            .onChange(of: deepLinkCardId) { _, newCardId in
+                handleDeepLink(cardId: newCardId)
+            }
         }
+    }
+
+    // MARK: - Deep link
+
+    private func handleDeepLink(cardId: String?) {
+        guard let cardId else { return }
+        // 找到卡片 → 推到 NavigationStack
+        if let card = store.cards.first(where: { $0.id == cardId }) {
+            // 如果卡片还在 processing, 强制完成 (防止 Task 被系统 suspend)
+            if card.status == .processing {
+                store.simulateProcessingComplete(cardId: cardId)
+            }
+            // 清掉 path 里的旧页面, 再 push 新的
+            navigationPath = NavigationPath()
+            // 微延迟让 NavigationStack 重置后再 push, 避免动画冲突
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                navigationPath.append(card)
+            }
+        }
+        // 消费完毕, 清零
+        deepLinkCardId = nil
     }
 
     // MARK: - Recording finished handlers
@@ -90,7 +123,6 @@ struct HomeView: View {
     /// 在 feed 顶部插入一张 `.longRec` 卡片.
     private func handleLongRecordingFinished() {
         let seconds = recordingStore.lastCaptureDurationSec
-        // 小于 2 秒的录音视为误触, 不插卡, 不弹 toast
         guard seconds >= 2 else { return }
 
         withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
@@ -98,26 +130,17 @@ struct HomeView: View {
         }
 
         let timeText = formatDuration(seconds)
-        withAnimation(.easeOut(duration: 0.2)) {
-            shortCaptureToastMessage = "新增长录音 \(timeText) · 正在结构化"
-        }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
-            withAnimation(.easeIn(duration: 0.2)) {
-                shortCaptureToastMessage = nil
-            }
-        }
+        showToastBriefly("新增长录音 \(timeText) · 正在结构化")
+
+        // 异步处理模拟: 4-6 秒后 card → done + 通知 + widget 刷新
+        scheduleProcessingSimulation(type: .longRec)
     }
 
     /// 按住 FAB 做短捕捉, 松手后走这里.
-    ///
-    /// 真实实现: 上传音频给后端, 后端 Agent 返回 `{type: cmd|idea|todo, ...}`
-    /// Demo: 本地随机挑一个分类, 让首页能看到三种新卡片都可能出现.
     private func handleShortCaptureFinished() {
         let seconds = recordingStore.lastCaptureDurationSec
         guard seconds >= 1 else { return }
 
-        // Mock 分类: 均匀随机从 cmd / idea / todo 里挑一个
         let classified: Card.CardType = [.command, .idea, .todo]
             .randomElement() ?? .idea
 
@@ -125,8 +148,43 @@ struct HomeView: View {
             store.insertNewCapturedCard(type: classified, durationSec: seconds)
         }
 
+        showToastBriefly("已捕捉 \(seconds) 秒 · Agent 判断为\(classified.label)")
+        scheduleProcessingSimulation(type: classified)
+    }
+
+    // MARK: - Processing simulation
+
+    /// 模拟 Agent 异步处理: 延迟后把最新的 processing 卡片转成 done,
+    /// 发一条本地通知, 刷新 Widget.
+    private func scheduleProcessingSimulation(type: Card.CardType) {
+        // 先写一次 App Group (widget 显示 "处理中…")
+        store.writeToAppGroup()
+
+        // 调度本地通知 (即使 App 被 backgrounded, 系统也会按时推送)
+        if let card = store.cards.first, card.status == .processing {
+            let delay = Double.random(in: 4...6)
+            notificationManager.scheduleCardCompleted(
+                cardId: card.id,
+                title: "\(type.label) · 处理完成",
+                body: HomeStore.completedTitle(for: type),
+                delay: delay
+            )
+
+            // App 内同步: 延迟后 card → done + 刷新 widget
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(delay))
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.3)) {
+                    store.simulateProcessingComplete(cardId: card.id)
+                }
+                store.writeToAppGroup()
+            }
+        }
+    }
+
+    private func showToastBriefly(_ message: String) {
         withAnimation(.easeOut(duration: 0.2)) {
-            shortCaptureToastMessage = "已捕捉 \(seconds) 秒 · Agent 判断为\(classified.label)"
+            shortCaptureToastMessage = message
         }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
@@ -259,6 +317,7 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView(deepLinkCardId: .constant(nil))
+        .environment(NotificationManager())
         .preferredColorScheme(.dark)
 }

@@ -37,25 +37,17 @@ targets:
         excludes:
           - "Resources/MockData/**"
       # 把 MockData 下的 JSON 放到 Resources build phase.
-      # ---------------------------------------------------------------
-      # 原来只在顶层 `resources:` 里加 `App/Resources/MockData` (一个目录)
-      # XcodeGen 会把它生成为一个 group reference, 但 group 里的 .json 文件
-      # **不会被加进 Resources build phase** —— 结果构建出来的 .app 里完全
-      # 没有 JSON, Bundle.main.url(forResource:) 永远返回 nil, FullSummary /
-      # Home 全部走 seed, 用户看到的就是 "加载中..." 占位.
-      # 改成用 `sources` + `buildPhase: resources`, 让 MockData/ 里的每个
-      # 文件都被显式 copy 进 bundle.
       - path: App/Resources/MockData
         buildPhase: resources
+      # Shared/ 放 App ↔ Widget 共享的类型 + 工具 (SharedModels, SharedDataWriter).
+      # 两个 target 都引用这个 path, 所以这些 .swift 文件会被编译到两个进程里.
+      - path: Shared
     resources:
       - path: App/Assets.xcassets
     info:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Monostone
-        # iOS 14+: 用 UILaunchScreen 空字典告诉系统"这是现代 app, 用默认 launch screen".
-        # 不要用 UILaunchStoryboardName="" (空字符串) —— iOS 会去找不存在的 storyboard
-        # 然后显示纯黑屏, 这是 root view 根本没加载的主要原因.
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
@@ -67,6 +59,11 @@ targets:
         NSBluetoothAlwaysUsageDescription: "Monostone 需要通过蓝牙连接你的 Monostone 戒指"
         NSCalendarsUsageDescription: "Monostone 会把待办同步到你的日历"
         NSRemindersUsageDescription: "Monostone 会把 Action Items 写入提醒事项"
+        # Deep link URL scheme: monostone://card/{cardId}
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - monostone
+            CFBundleURLName: com.monostone.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monostone.app
@@ -74,9 +71,28 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"  # iPhone only
         SUPPORTS_MACCATALYST: NO
-        # 不加 GENERATE_INFOPLIST_FILE: 我们用自定义 Info.plist (info.path 已指定),
-        # GENERATE_INFOPLIST_FILE=YES 会让 Xcode 和自定义 plist 冲突.
+        CODE_SIGN_ENTITLEMENTS: App/MonostoneApp.entitlements
+    dependencies:
+      - target: MonostoneWidget
+        embed: true
 
+  # ============ Widget Extension ============
+  MonostoneWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MonostoneWidget
+      - path: Shared
+    info:
+      path: MonostoneWidget/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.monostone.app.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_STRICT_CONCURRENCY: complete
+        CODE_SIGN_ENTITLEMENTS: MonostoneWidget/MonostoneWidget.entitlements
+
+  # ============ Tests ============
   MonostoneAppTests:
     type: bundle.unit-test
     platform: iOS
@@ -95,6 +111,7 @@ schemes:
       targets:
         MonostoneApp: all
         MonostoneAppTests: [test]
+        MonostoneWidget: all
     run:
       config: Debug
     test:
