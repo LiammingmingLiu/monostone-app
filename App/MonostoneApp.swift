@@ -22,8 +22,8 @@ struct MonostoneApp: App {
                 .environment(ringCoordinator)
                 .environment(notificationManager)
                 .task {
-                    // 冷启动立即开始扫描 / 模拟连接
                     await ringCoordinator.connect()
+                    await notificationManager.requestPermission()
                 }
                 .onOpenURL { url in
                     // 处理 monostone://card/{cardId} 和 monostone://home
