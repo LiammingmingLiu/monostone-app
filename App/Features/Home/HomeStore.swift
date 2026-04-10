@@ -262,7 +262,7 @@ final class HomeStore {
     }
 
     /// 完成后的 mock meta 行.
-    private static func completedMetaLine(for type: Card.CardType) -> String {
+    static func completedMetaLine(for type: Card.CardType) -> String {
         switch type {
         case .longRec: "刚刚 · 已结构化 · 3 项待办"
         case .command: "已完成 · 调取 3 项上下文"

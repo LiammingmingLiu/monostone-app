@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import WidgetKit
 
@@ -155,30 +156,94 @@ struct HomeView: View {
     // MARK: - Processing simulation
 
     /// 模拟 Agent 异步处理: 延迟后把最新的 processing 卡片转成 done,
-    /// 发一条本地通知, 刷新 Widget.
+    /// 更新 Live Activity + 发通知 + 刷新 Widget.
     private func scheduleProcessingSimulation(type: Card.CardType) {
-        // 先写一次 App Group (widget 显示 "处理中…")
         store.writeToAppGroup()
 
-        // 调度本地通知 (即使 App 被 backgrounded, 系统也会按时推送)
-        if let card = store.cards.first, card.status == .processing {
-            let delay = Double.random(in: 4...6)
+        guard let card = store.cards.first, card.status == .processing else { return }
+
+        let delay = Double.random(in: 4...6)
+        let completedTitle = HomeStore.completedTitle(for: type)
+        let completedMeta = HomeStore.completedMetaLine(for: type)
+        let processingDetail = card.processingMeta ?? "处理中…"
+
+        // ① 启动 Live Activity (锁屏实时状态卡片)
+        let liveActivity = startLiveActivity(
+            card: card,
+            type: type,
+            processingDetail: processingDetail
+        )
+
+        // ② 调度普通通知作为 fallback (Live Activity 不可用时)
+        if liveActivity == nil {
             notificationManager.scheduleCardCompleted(
                 cardId: card.id,
                 title: "\(type.label) · 处理完成",
-                body: HomeStore.completedTitle(for: type),
+                body: completedTitle,
                 delay: delay
             )
+        }
 
-            // App 内同步: 延迟后 card → done + 刷新 widget
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(delay))
-                guard !Task.isCancelled else { return }
-                withAnimation(.easeOut(duration: 0.3)) {
-                    store.simulateProcessingComplete(cardId: card.id)
-                }
-                store.writeToAppGroup()
+        // ③ 延迟后: card → done + 更新 Live Activity + 刷新 widget
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+
+            withAnimation(.easeOut(duration: 0.3)) {
+                store.simulateProcessingComplete(cardId: card.id)
             }
+            store.writeToAppGroup()
+
+            // 更新 Live Activity 到完成态
+            if let activity = liveActivity {
+                let doneState = CardProcessingAttributes.ContentState(
+                    status: "done",
+                    title: completedTitle,
+                    detail: completedMeta
+                )
+                await activity.update(
+                    ActivityContent(state: doneState, staleDate: nil)
+                )
+
+                // 10 秒后结束 Live Activity
+                try? await Task.sleep(for: .seconds(10))
+                await activity.end(nil, dismissalPolicy: .default)
+            }
+        }
+    }
+
+    // MARK: - Live Activity
+
+    /// 启动一个 Live Activity, 在锁屏上显示处理状态.
+    /// 如果 ActivityKit 不可用 (模拟器限制 / 用户关闭) 返回 nil,
+    /// 调用方降级为普通通知.
+    private func startLiveActivity(
+        card: Card,
+        type: Card.CardType,
+        processingDetail: String
+    ) -> Activity<CardProcessingAttributes>? {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return nil }
+
+        let attributes = CardProcessingAttributes(
+            cardId: card.id,
+            cardTypeRaw: type.rawValue
+        )
+        let initialState = CardProcessingAttributes.ContentState(
+            status: "processing",
+            title: "正在处理…",
+            detail: processingDetail
+        )
+        let content = ActivityContent(state: initialState, staleDate: nil)
+
+        do {
+            return try Activity.request(
+                attributes: attributes,
+                content: content,
+                pushType: nil // 不用 push token, 纯本地更新
+            )
+        } catch {
+            print("[LiveActivity] request failed: \(error)")
+            return nil
         }
     }
 

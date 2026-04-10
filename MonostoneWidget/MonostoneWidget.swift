@@ -7,6 +7,7 @@ import SwiftUI
 struct MonostoneWidgets: WidgetBundle {
     var body: some Widget {
         MonostoneCardWidget()
+        CardProcessingLiveActivity()
     }
 }
 

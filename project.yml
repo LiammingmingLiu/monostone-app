@@ -59,6 +59,7 @@ targets:
         NSBluetoothAlwaysUsageDescription: "Monostone 需要通过蓝牙连接你的 Monostone 戒指"
         NSCalendarsUsageDescription: "Monostone 会把待办同步到你的日历"
         NSRemindersUsageDescription: "Monostone 会把 Action Items 写入提醒事项"
+        NSSupportsLiveActivities: true
         # Deep link URL scheme: monostone://card/{cardId}
         CFBundleURLTypes:
           - CFBundleURLSchemes:
